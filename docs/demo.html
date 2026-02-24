@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>KaizenTerm Demo</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0e17;
+            color: #c8ccd4;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 42px;
+            background: linear-gradient(180deg, #12182a 0%, #0d1220 100%);
+            border-bottom: 1px solid rgba(0, 229, 255, .12);
+            padding: 0 16px;
+            gap: 12px;
+        }
+
+        .top-bar-left,
+        .top-bar-center,
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .logo-text {
+            font-size: 14px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #00e5ff, #ff006e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid rgba(255, 255, 255, .08);
+            color: #8892a4;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: inherit;
+        }
+
+        .layout-controls {
+            display: flex;
+            gap: 2px;
+        }
+
+        .layout-btn {
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid transparent;
+            color: #556;
+            padding: 4px 6px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .layout-btn.active {
+            background: rgba(0, 229, 255, .12);
+            border-color: rgba(0, 229, 255, .25);
+            color: #00e5ff;
+        }
+
+        .timer-display {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #8892a4;
+            font-size: 12px;
+            font-family: 'JetBrains Mono';
+        }
+
+        .timer-btn {
+            background: transparent;
+            border: none;
+            color: #00e5ff;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .shortcut {
+            font-size: 9px;
+            background: rgba(255, 255, 255, .08);
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        #agent-tabs {
+            display: flex;
+            height: 32px;
+            background: #0c1021;
+            border-bottom: 1px solid rgba(255, 255, 255, .06);
+            padding: 0 8px;
+            gap: 2px;
+            align-items: flex-end;
+        }
+
+        .agent-tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 14px 5px 10px;
+            background: rgba(255, 255, 255, .03);
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            font-size: 11px;
+            font-family: 'JetBrains Mono';
+            color: #667;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .agent-tab.active {
+            background: #141b2d;
+            border-color: rgba(0, 229, 255, .15);
+            color: #c8ccd4;
+        }
+
+        .agent-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #141b2d;
+        }
+
+        .tab-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+
+        .tab-dot.purple {
+            background: #a78bfa;
+            box-shadow: 0 0 6px rgba(167, 139, 250, .4);
+        }
+
+        .tab-dot.green {
+            background: #22c55e;
+            box-shadow: 0 0 6px rgba(34, 197, 94, .4);
+        }
+
+        .tab-dot.blue {
+            background: #3b82f6;
+            box-shadow: 0 0 6px rgba(59, 130, 246, .4);
+        }
+
+        .tab-dot.yellow {
+            background: #eab308;
+            box-shadow: 0 0 6px rgba(234, 179, 8, .4);
+        }
+
+        .tab-close {
+            font-size: 9px;
+            color: #556;
+            margin-left: 4px;
+        }
+
+        #terminal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            flex: 1;
+            gap: 1px;
+            background: rgba(255, 255, 255, .03);
+            padding: 1px;
+        }
+
+        .terminal-pane {
+            background: #0d1117;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, .03);
+            border-bottom: 1px solid rgba(255, 255, 255, .05);
+            font-size: 10px;
+            color: #556;
+        }
+
+        .terminal-header .name {
+            color: #8892a4;
+            font-weight: 500;
+        }
+
+        .terminal-body {
+            flex: 1;
+            padding: 8px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            line-height: 1.65;
+            overflow: hidden;
+        }
+
+        .prompt {
+            color: #22c55e;
+        }
+
+        .cmd {
+            color: #c8ccd4;
+        }
+
+        .output {
+            color: #8892a4;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        .info {
+            color: #3b82f6;
+        }
+
+        .warning {
+            color: #eab308;
+        }
+
+        .success {
+            color: #22c55e;
+        }
+
+        .path {
+            color: #a78bfa;
+        }
+
+        .highlight {
+            color: #00e5ff;
+        }
+
+        #kanban-sidebar {
+            width: 270px;
+            background: linear-gradient(180deg, #0f1525 0%, #0a0e17 100%);
+            border-left: 1px solid rgba(0, 229, 255, .1);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .kanban-header {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, .06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .kanban-header h2 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #c8ccd4;
+        }
+
+        .kanban-columns {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 8px;
+        }
+
+        .column-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 0;
+            margin-bottom: 4px;
+        }
+
+        .column-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .column-dot.backlog {
+            background: #8892a4;
+        }
+
+        .column-dot.doing {
+            background: #3b82f6;
+        }
+
+        .column-dot.review {
+            background: #eab308;
+        }
+
+        .column-dot.done {
+            background: #22c55e;
+        }
+
+        .column-header h3 {
+            font-size: 11px;
+            font-weight: 600;
+            color: #8892a4;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .task-card {
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid rgba(255, 255, 255, .06);
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 4px;
+            font-size: 10px;
+        }
+
+        .task-card .task-title {
+            color: #c8ccd4;
+            font-weight: 500;
+            margin-bottom: 3px;
+        }
+
+        .task-card .task-meta {
+            color: #556;
+            font-size: 9px;
+            display: flex;
+            gap: 6px;
+        }
+
+        .tag {
+            font-size: 8px;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        .tag.high {
+            background: rgba(239, 68, 68, .15);
+            color: #ef4444;
+        }
+
+        .tag.medium {
+            background: rgba(234, 179, 8, .15);
+            color: #eab308;
+        }
+
+        .tag.low {
+            background: rgba(34, 197, 94, .15);
+            color: #22c55e;
+        }
+
+        .add-task-btn {
+            background: transparent;
+            border: none;
+            color: #556;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: auto;
+        }
+
+        #status-bar {
+            display: flex;
+            align-items: center;
+            height: 24px;
+            background: #0a0e14;
+            border-top: 1px solid rgba(255, 255, 255, .05);
+            padding: 0 12px;
+            font-size: 10px;
+            color: #556;
+            gap: 2px;
+            font-family: 'JetBrains Mono';
+        }
+
+        .status-item {
+            padding: 0 6px;
+        }
+
+        .status-separator {
+            color: #333;
+        }
+
+        .status-ai-badge {
+            color: #22c55e;
+        }
+
+        .kaizen-quote {
+            margin-left: auto;
+            font-style: italic;
+            color: #445;
+        }
+
+        #workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <header id="top-bar">
+            <div class="top-bar-left">
+                <div class="logo">
+                    <svg viewBox="0 0 40 40" width="24" height="24">
+                        <defs>
+                            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#00e5ff" />
+                                <stop offset="100%" stop-color="#ff006e" />
+                            </linearGradient>
+                        </defs>
+                        <circle cx="20" cy="20" r="16" fill="none" stroke="url(#g)" stroke-width="2.5"
+                            stroke-dasharray="90 10" stroke-linecap="round" />
+                    </svg>
+                    <span class="logo-text">KaizenTerm</span>
+                </div>
+                <nav class="layout-controls">
+                    <button class="layout-btn"><svg viewBox="0 0 16 16" width="13" height="13">
+                            <rect x="1" y="1" width="14" height="14" rx="2" fill="none" stroke="currentColor"
+                                stroke-width="1.5" />
+                        </svg></button>
+                    <button class="layout-btn"><svg viewBox="0 0 16 16" width="13" height="13">
+                            <rect x="1" y="1" width="6" height="14" rx="1" fill="none" stroke="currentColor"
+                                stroke-width="1.5" />
+                            <rect x="9" y="1" width="6" height="14" rx="1" fill="none" stroke="currentColor"
+                                stroke-width="1.5" />
+                        </svg></button>
+                    <button class="layout-btn active"><svg viewBox="0 0 16 16" width="13" height="13">
+                            <rect x="1" y="1" width="6" height="6" rx="1" fill="none" stroke="currentColor"
+                                stroke-width="1.5" />
+                            <rect x="9" y="1" width="6" height="6" rx="1" fill="none" stroke="currentColor"
+                                stroke-width="1.5" />
+                            <rect x="1" y="9" width="6" height="6" rx="1" fill="none" stroke="currentColor"
+                                stroke-width="1.5" />
+                            <rect x="9" y="9" width="6" height="6" rx="1" fill="none" stroke="currentColor"
+                                stroke-width="1.5" />
+                        </svg></button>
+                    <button class="layout-btn"><svg viewBox="0 0 16 16" width="13" height="13">
+                            <rect x="1" y="1" width="4" height="6" rx="1" fill="none" stroke="currentColor"
+                                stroke-width="1.2" />
+                            <rect x="6" y="1" width="4" height="6" rx="1" fill="none" stroke="currentColor"
+                                stroke-width="1.2" />
+                            <rect x="11" y="1" width="4" height="6" rx="1" fill="none" stroke="currentColor"
+                                stroke-width="1.2" />
+                            <rect x="1" y="9" width="4" height="6" rx="1" fill="none" stroke="currentColor"
+                                stroke-width="1.2" />
+                            <rect x="6" y="9" width="4" height="6" rx="1" fill="none" stroke="currentColor"
+                                stroke-width="1.2" />
+                            <rect x="11" y="9" width="4" height="6" rx="1" fill="none" stroke="currentColor"
+                                stroke-width="1.2" />
+                        </svg></button>
+                </nav>
+                <button class="action-btn">&#128295; Tools</button>
+            </div>
+            <div class="top-bar-center">
+                <button class="action-btn">+ New Agent</button>
+                <button class="action-btn">&#9678; Zen</button>
+                <button class="action-btn">&#8984; <span class="shortcut">Ctrl+K</span></button>
+            </div>
+            <div class="top-bar-right">
+                <div class="timer-display"><button class="timer-btn">&#9654;</button> <span>25:00</span> <span
+                        style="color:#445">0 cycles</span></div>
+                <button class="action-btn" style="border-color:rgba(0,229,255,.2);color:#00e5ff;">&#9776;
+                    Kanban</button>
+            </div>
+        </header>
+
+        <div id="agent-tabs">
+            <div class="agent-tab active"><span class="tab-dot purple"></span> claude-code <span
+                    class="tab-close">&#10005;</span></div>
+            <div class="agent-tab"><span class="tab-dot green"></span> codex <span class="tab-close">&#10005;</span>
+            </div>
+            <div class="agent-tab"><span class="tab-dot blue"></span> aider <span class="tab-close">&#10005;</span>
+            </div>
+            <div class="agent-tab"><span class="tab-dot yellow"></span> opencode <span class="tab-close">&#10005;</span>
+            </div>
+        </div>
+
+        <main id="workspace">
+            <section id="terminal-grid">
+                <!-- Claude Code -->
+                <div class="terminal-pane">
+                    <div class="terminal-header"><span class="name">&#9899; claude-code</span><span>zsh</span></div>
+                    <div class="terminal-body">
+                        <div><span class="path">~/project</span> <span class="prompt">&#10095;</span> <span
+                                class="cmd">claude</span></div>
+                        <div>&nbsp;</div>
+                        <div><span
+                                class="highlight">&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;</span>
+                        </div>
+                        <div><span class="highlight">&#9474;</span> <span style="color:#a78bfa;font-weight:bold">Claude
+                                Code</span> <span class="output">v1.0.3</span> <span class="highlight">&#9474;</span>
+                        </div>
+                        <div><span
+                                class="highlight">&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;</span>
+                        </div>
+                        <div>&nbsp;</div>
+                        <div><span style="color:#a78bfa">claude &#9656;</span> <span class="cmd">refactor auth
+                                middleware to use JWT</span></div>
+                        <div>&nbsp;</div>
+                        <div><span class="output">I'll refactor the auth middleware:</span></div>
+                        <div><span class="output">1. Read current middleware</span> <span
+                                class="success">&#10003;</span></div>
+                        <div><span class="output">2. Install jsonwebtoken</span> <span class="success">&#10003;</span>
+                        </div>
+                        <div><span class="output">3. Create JWT utility module</span> <span
+                                class="success">&#10003;</span></div>
+                        <div><span class="info">4. Update auth.middleware.ts...</span></div>
+                        <div>&nbsp;</div>
+                        <div><span class="success">&#9998; Edit</span> <span class="output">src/middleware/auth.ts (+42
+                                -18)</span></div>
+                        <div><span class="success">&#9998; New</span> <span class="output">src/utils/jwt.ts (+35)</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Codex CLI -->
+                <div class="terminal-pane">
+                    <div class="terminal-header"><span class="name">&#9899; codex</span><span>zsh</span></div>
+                    <div class="terminal-body">
+                        <div><span class="path">~/project</span> <span class="prompt">&#10095;</span> <span
+                                class="cmd">codex</span></div>
+                        <div>&nbsp;</div>
+                        <div><span style="color:#22c55e;font-weight:bold">OpenAI Codex</span> <span
+                                class="output">(research preview)</span></div>
+                        <div><span class="output">Session: full-auto | Model: codex-1</span></div>
+                        <div>&nbsp;</div>
+                        <div><span style="color:#22c55e">codex &#9656;</span> <span class="cmd">add pagination to users
+                                API endpoint</span></div>
+                        <div>&nbsp;</div>
+                        <div><span class="output">Planning...</span></div>
+                        <div><span class="info">&#128194; Read</span> <span
+                                class="output">src/controllers/users.controller.ts</span></div>
+                        <div><span class="info">&#128194; Read</span> <span
+                                class="output">src/services/users.service.ts</span></div>
+                        <div><span class="success">&#9889; Exec</span> <span class="output">npm install
+                                @nestjs/mapped-types</span></div>
+                        <div><span class="success">&#9998; Patch</span> <span class="output">users.controller.ts (+15
+                                -3)</span></div>
+                        <div><span class="success">&#9998; Patch</span> <span class="output">users.service.ts (+22
+                                -8)</span></div>
+                        <div><span class="success">&#9998; New</span> <span class="output">dto/pagination.dto.ts
+                                (+18)</span></div>
+                        <div><span class="success">&#10003; All changes applied.</span> <span class="output">Running
+                                tests...</span></div>
+                    </div>
+                </div>
+                <!-- Aider -->
+                <div class="terminal-pane">
+                    <div class="terminal-header"><span class="name">&#9899; aider</span><span>zsh</span></div>
+                    <div class="terminal-body">
+                        <div><span class="path">~/project</span> <span class="prompt">&#10095;</span> <span
+                                class="cmd">aider --model deepseek</span></div>
+                        <div>&nbsp;</div>
+                        <div><span style="color:#3b82f6;font-weight:bold">Aider v0.82.1</span> <span class="output">with
+                                deepseek-coder on ~/project</span></div>
+                        <div><span class="output">Git repo: .git with 47 files</span></div>
+                        <div><span class="output">Repo-map: using 1024 tokens</span></div>
+                        <div>&nbsp;</div>
+                        <div><span style="color:#3b82f6">aider &#9656;</span> <span class="cmd">write E2E tests for the
+                                checkout flow</span></div>
+                        <div>&nbsp;</div>
+                        <div><span class="output">Creating comprehensive E2E tests with Playwright:</span></div>
+                        <div>&nbsp;</div>
+                        <div><span class="success">&#9998; New</span> <span class="output">tests/e2e/checkout.spec.ts
+                                (+87)</span></div>
+                        <div><span class="output"> - test: complete purchase flow</span></div>
+                        <div><span class="output"> - test: apply coupon code</span></div>
+                        <div><span class="output"> - test: handle payment failure</span></div>
+                        <div><span class="success">&#10003; Commit:</span> <span class="output">feat: add E2E tests for
+                                checkout</span></div>
+                    </div>
+                </div>
+                <!-- OpenCode -->
+                <div class="terminal-pane">
+                    <div class="terminal-header"><span class="name">&#9889; opencode</span><span>zsh</span></div>
+                    <div class="terminal-body">
+                        <div><span class="path">~/project</span> <span class="prompt">&#10095;</span> <span
+                                class="cmd">opencode</span></div>
+                        <div>&nbsp;</div>
+                        <div><span style="color:#eab308;font-weight:bold">OpenCode</span> <span class="output">v0.1 --
+                                Terminal AI Coding Agent</span></div>
+                        <div>&nbsp;</div>
+                        <div><span style="color:#eab308">opencode &#9656;</span> <span class="cmd">setup Docker Compose
+                                for production</span></div>
+                        <div>&nbsp;</div>
+                        <div><span class="info">&#128194; Scanning</span> <span class="output">project
+                                structure...</span></div>
+                        <div><span class="info">&#128194; Read</span> <span class="output">package.json,
+                                Dockerfile</span></div>
+                        <div>&nbsp;</div>
+                        <div><span class="success">&#9998; New</span> <span class="output">docker-compose.prod.yml
+                                (+45)</span></div>
+                        <div><span class="output"> - app: Node.js 20 Alpine</span></div>
+                        <div><span class="output"> - db: PostgreSQL 16</span></div>
+                        <div><span class="output"> - redis: Redis 7 Alpine</span></div>
+                        <div><span class="output"> - nginx: reverse proxy</span></div>
+                        <div><span class="success">&#9998; New</span> <span class="output">nginx/nginx.conf (+32)</span>
+                        </div>
+                        <div><span class="success">&#10003; Done.</span> <span class="output">Run: docker-compose -f
+                                docker-compose.prod.yml up</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <aside id="kanban-sidebar">
+                <div class="kanban-header">
+                    <h2>Kaizen Board</h2><span style="color:#556;cursor:pointer">&#10005;</span>
+                </div>
+                <div class="kanban-columns">
+                    <div>
+                        <div class="column-header"><span class="column-dot backlog"></span>
+                            <h3>Backlog</h3><span class="add-task-btn">+</span>
+                        </div>
+                        <div class="task-card">
+                            <div class="task-title">Add pagination to users API</div>
+                            <div class="task-meta"><span class="tag low">low</span><span>API-42</span></div>
+                        </div>
+                        <div class="task-card">
+                            <div class="task-title">Write E2E tests for checkout</div>
+                            <div class="task-meta"><span class="tag medium">med</span><span>QA-19</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="column-header"><span class="column-dot doing"></span>
+                            <h3>In Progress</h3><span class="add-task-btn">+</span>
+                        </div>
+                        <div class="task-card" style="border-left:2px solid #3b82f6;">
+                            <div class="task-title">Refactor auth to JWT</div>
+                            <div class="task-meta"><span class="tag high">high</span><span>SEC-7</span></div>
+                        </div>
+                        <div class="task-card" style="border-left:2px solid #3b82f6;">
+                            <div class="task-title">Setup Docker CI/CD</div>
+                            <div class="task-meta"><span class="tag medium">med</span><span>DEV-33</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="column-header"><span class="column-dot review"></span>
+                            <h3>Review</h3><span class="add-task-btn">+</span>
+                        </div>
+                        <div class="task-card" style="border-left:2px solid #eab308;">
+                            <div class="task-title">Users pagination PR</div>
+                            <div class="task-meta"><span class="tag medium">med</span><span>API-42</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="column-header"><span class="column-dot done"></span>
+                            <h3>Done</h3><span class="add-task-btn">+</span>
+                        </div>
+                        <div class="task-card" style="opacity:.7">
+                            <div class="task-title">Project scaffolding</div>
+                            <div class="task-meta"><span class="tag low">low</span><span>DEV-1</span></div>
+                        </div>
+                        <div class="task-card" style="opacity:.7">
+                            <div class="task-title">NestJS API setup</div>
+                            <div class="task-meta"><span class="tag low">low</span><span>DEV-2</span></div>
+                        </div>
+                        <div class="task-card" style="opacity:.7">
+                            <div class="task-title">User CRUD endpoints</div>
+                            <div class="task-meta"><span class="tag medium">med</span><span>API-10</span></div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <footer id="status-bar">
+            <span class="status-item">4 agents</span><span class="status-separator">&#9474;</span>
+            <span class="status-item">2x2</span><span class="status-separator">&#9474;</span>
+            <span class="status-item">8 tasks</span><span class="status-separator">&#9474;</span>
+            <span class="status-item status-ai-badge">&#129302; deepseek-coder:6.7b</span><span
+                class="status-separator">&#9474;</span>
+            <span class="status-item">&#9015; main</span><span class="status-separator">&#9474;</span>
+            <span class="status-item">&#128276;</span><span class="status-separator">&#9474;</span>
+            <span class="status-item">Session: 47:23</span>
+            <span class="kaizen-quote">&#25913;&#21892; -- Continuous Improvement</span>
+        </footer>
+    </div>
+</body>
+
+</html>

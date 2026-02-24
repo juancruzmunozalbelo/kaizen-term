@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KaizenTerm — AI-Powered Terminal Orchestration</title>
+    <meta name="description"
+        content="Orchestrate Claude Code, Codex CLI, Aider, and OpenCode simultaneously in a multi-pane terminal with integrated Kanban board.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0e17;
+            --surface: #12182a;
+            --surface2: #1a2138;
+            --text: #c8ccd4;
+            --muted: #8892a4;
+            --dim: #556;
+            --accent: #00e5ff;
+            --pink: #ff006e;
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --purple: #a78bfa;
+            --yellow: #eab308;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 80px 20px 40px;
+            background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+        }
+
+        .hero-logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .hero-logo svg {
+            width: 48px;
+            height: 48px;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero .tagline {
+            font-size: 20px;
+            color: var(--muted);
+            margin: 12px 0 8px;
+            max-width: 600px;
+            margin-inline: auto;
+        }
+
+        .hero .sub {
+            font-size: 14px;
+            color: var(--dim);
+            margin-bottom: 32px;
+        }
+
+        .hero-badges {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+
+        .hero-badges img {
+            height: 22px;
+        }
+
+        .hero-screenshot {
+            max-width: 900px;
+            width: 100%;
+            border-radius: 12px;
+            margin: 0 auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .5), 0 0 40px rgba(0, 229, 255, .08);
+            border: 1px solid rgba(0, 229, 255, .15);
+        }
+
+        .cta-row {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 48px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            border: none;
+            transition: all .2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--blue));
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 229, 255, .25);
+            text-decoration: none;
+        }
+
+        .btn-secondary {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, .1);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            text-decoration: none;
+        }
+
+        .features {
+            max-width: 960px;
+            margin: 60px auto;
+            padding: 0 20px;
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: 28px;
+            margin-bottom: 40px;
+            color: var(--text);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid rgba(255, 255, 255, .06);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .feature-card .icon {
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+
+        .feature-card h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .feature-card p {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .install {
+            max-width: 700px;
+            margin: 60px auto;
+            padding: 0 20px;
+            text-align: center;
+        }
+
+        .install h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        .install pre {
+            background: var(--surface);
+            border: 1px solid rgba(255, 255, 255, .08);
+            border-radius: 10px;
+            padding: 20px 24px;
+            text-align: left;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .install code .comment {
+            color: var(--dim);
+        }
+
+        .install code .cmd {
+            color: var(--accent);
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--dim);
+            font-size: 13px;
+            border-top: 1px solid rgba(255, 255, 255, .05);
+            margin-top: 60px;
+        }
+
+        footer a {
+            color: var(--muted);
+        }
+    </style>
+</head>
+
+<body>
+    <section class="hero">
+        <div class="hero-logo">
+            <svg viewBox="0 0 60 60">
+                <defs>
+                    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#00e5ff" />
+                        <stop offset="100%" stop-color="#ff006e" />
+                    </linearGradient>
+                </defs>
+                <circle cx="30" cy="30" r="24" fill="none" stroke="url(#g)" stroke-width="3" stroke-dasharray="120 15"
+                    stroke-linecap="round" />
+                <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-size="24"
+                    fill="url(#g)">&#9889;</text>
+            </svg>
+            <h1>KaizenTerm</h1>
+        </div>
+        <p class="tagline">The first Terminal Orchestration Cockpit for the Vibe Coding era.</p>
+        <p class="sub">Run Claude Code, Codex CLI, Aider, and OpenCode — all at once.</p>
+
+        <div class="hero-badges">
+            <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT">
+            <img src="https://img.shields.io/badge/Electron-33+-47848F?logo=electron&logoColor=white" alt="Electron">
+            <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white"
+                alt="TypeScript">
+        </div>
+
+        <div class="cta-row">
+            <a href="https://github.com/juancruzmunozalbelo/kaizen-term" class="btn btn-primary">&#11088; View on
+                GitHub</a>
+            <a href="https://github.com/juancruzmunozalbelo/kaizen-term/archive/refs/heads/main.zip"
+                class="btn btn-secondary">&#8615; Download ZIP</a>
+        </div>
+
+        <img src="screenshot.png" alt="KaizenTerm Screenshot" class="hero-screenshot">
+    </section>
+
+    <section class="features">
+        <h2>Why KaizenTerm?</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="icon">&#129302;</div>
+                <h3>Multi-Agent Orchestration</h3>
+                <p>Run Claude Code, Codex CLI, Aider, OpenCode, or any terminal-based AI agent simultaneously in
+                    separate panes.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#128196;</div>
+                <h3>Integrated Kanban Board</h3>
+                <p>Create tasks, assign them to agents, and watch them flow from Backlog to Done automatically.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#128172;</div>
+                <h3>Natural Language Commands</h3>
+                <p>Type <code>#</code> followed by plain English. KaizenTerm translates it to the right shell command.
+                </p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#128225;</div>
+                <h3>@Mention Agents</h3>
+                <p>Reference multiple agents in a single prompt: <code>@frontend @backend why CORS?</code></p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#9201;</div>
+                <h3>Focus Timer</h3>
+                <p>Built-in Pomodoro timer to keep you in deep work, right where you code.</p>
+            </div>
+            <div class="feature-card">
+                <div class="icon">&#128268;</div>
+                <h3>MCP Integration</h3>
+                <p>Model Context Protocol server provides rich project context to your AI tools.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="install">
+        <h2>Get Started</h2>
+        <pre><code><span class="comment"># Clone the repo</span>
+<span class="cmd">git clone https://github.com/juancruzmunozalbelo/kaizen-term.git</span>
+<span class="cmd">cd kaizen-term</span>
+
+<span class="comment"># Install and run</span>
+<span class="cmd">npm install</span>
+<span class="cmd">npm run dev</span></code></pre>
+    </section>
+
+    <footer>
+        <p>Built by <a href="https://github.com/juancruzmunozalbelo">Juan Cruz Muñoz Albelo</a> &middot; MIT License
+            &middot; &#25913;&#21892; Continuous Improvement</p>
+    </footer>
+</body>
+
+</html>
