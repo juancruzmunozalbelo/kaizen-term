@@ -14,6 +14,10 @@ export interface KanbanTask {
     id: string;
     title: string;
     status: 'backlog' | 'doing' | 'review' | 'done';
+    priority?: 'low' | 'medium' | 'high' | 'critical';
+    description?: string;
+    labels?: string[];
+    jiraKey?: string;
     agentId?: string;
     createdAt: number;
 }

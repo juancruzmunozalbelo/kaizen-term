@@ -13,6 +13,13 @@ type OpenDetailCallback = (task: KanbanTask) => void;
 let bridge: typeof window.kaizenBridge | null = null;
 try { bridge = window.kaizenBridge; } catch { }
 
+const PRIORITY_META: Record<string, { dot: string; color: string; label: string }> = {
+    low: { dot: '🔵', color: 'var(--text-muted)', label: 'Low' },
+    medium: { dot: '🟡', color: 'var(--agent-amber)', label: 'Medium' },
+    high: { dot: '🟠', color: '#ff8c00', label: 'High' },
+    critical: { dot: '🔴', color: 'var(--agent-magenta)', label: 'Critical' },
+};
+
 export class KanbanBoard {
     private tasks: KanbanTask[] = [];
     private containerEl: HTMLElement;
@@ -60,13 +67,12 @@ export class KanbanBoard {
             id: t.id || generateId(),
             title: t.title || 'Untitled',
             status: this.mapStatus(t.status),
+            priority: t.priority || 'medium',
+            description: t.description || '',
+            labels: t.labels || [],
+            jiraKey: t.jiraKey,
             agentId: t.agentId,
             createdAt: t.createdAt ? new Date(t.createdAt).getTime() : Date.now(),
-            // Preserve extra MCP fields
-            ...(t.priority && { priority: t.priority }),
-            ...(t.description && { description: t.description }),
-            ...(t.jiraKey && { jiraKey: t.jiraKey }),
-            ...(t.labels && { labels: t.labels }),
         }));
     }
 
@@ -88,12 +94,12 @@ export class KanbanBoard {
         return {
             id: t.id,
             title: t.title,
-            description: (t as any).description || '',
+            description: t.description || '',
             status: t.status,
-            priority: (t as any).priority || 'medium',
+            priority: t.priority || 'medium',
             agentId: t.agentId,
-            labels: (t as any).labels || [],
-            jiraKey: (t as any).jiraKey,
+            labels: t.labels || [],
+            jiraKey: t.jiraKey,
             createdAt: new Date(t.createdAt).toISOString(),
             updatedAt: new Date().toISOString(),
         };
@@ -133,6 +139,8 @@ export class KanbanBoard {
         });
     }
 
+    // ─── Enhanced Inline Add ──────────────────────────────────────────────
+
     private showInlineAdd(status: KanbanTask['status']) {
         const columnTasks = this.containerEl.querySelector(`.column-tasks[data-status="${status}"]`);
         if (!columnTasks) return;
@@ -140,34 +148,70 @@ export class KanbanBoard {
         const existing = columnTasks.querySelector('.task-inline-add');
         if (existing) existing.remove();
 
+        let selectedPriority: KanbanTask['priority'] = 'medium';
+
         const wrapper = document.createElement('div');
         wrapper.className = 'task-inline-add';
-        wrapper.innerHTML = `<input type="text" class="task-card-title-input" placeholder="Task description..." autofocus />`;
+        wrapper.innerHTML = `
+            <input type="text" class="task-card-title-input" placeholder="Task title..." autofocus />
+            <div class="inline-add-row">
+                <div class="inline-priority-picker">
+                    <button class="priority-dot-btn" data-priority="low" title="Low"><span class="priority-dot priority-low"></span></button>
+                    <button class="priority-dot-btn selected" data-priority="medium" title="Medium"><span class="priority-dot priority-medium"></span></button>
+                    <button class="priority-dot-btn" data-priority="high" title="High"><span class="priority-dot priority-high"></span></button>
+                    <button class="priority-dot-btn" data-priority="critical" title="Critical"><span class="priority-dot priority-critical"></span></button>
+                </div>
+                <span class="inline-add-hint">↵ Enter</span>
+            </div>
+        `;
         columnTasks.appendChild(wrapper);
 
         const input = wrapper.querySelector('input') as HTMLInputElement;
         input.focus();
 
+        // Priority picker
+        const priorityBtns = wrapper.querySelectorAll('.priority-dot-btn');
+        priorityBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                priorityBtns.forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedPriority = (btn as HTMLElement).dataset.priority as KanbanTask['priority'];
+                input.focus(); // Keep focus on input
+            });
+        });
+
         const finish = () => {
             const title = input.value.trim();
             if (title) {
-                this.addTask(title, status);
+                this.addTask(title, status, selectedPriority);
             }
             wrapper.remove();
         };
 
-        input.addEventListener('blur', finish);
+        input.addEventListener('blur', (e) => {
+            // Don't close if clicking on priority buttons
+            const related = e.relatedTarget as HTMLElement;
+            if (related && wrapper.contains(related)) return;
+            setTimeout(() => {
+                if (!wrapper.contains(document.activeElement)) finish();
+            }, 100);
+        });
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') finish();
             if (e.key === 'Escape') { input.value = ''; finish(); }
         });
     }
 
-    addTask(title: string, status: KanbanTask['status'] = 'backlog'): KanbanTask {
+    addTask(title: string, status: KanbanTask['status'] = 'backlog', priority: KanbanTask['priority'] = 'medium'): KanbanTask {
         const task: KanbanTask = {
             id: generateId(),
             title,
             status,
+            priority,
+            description: '',
+            labels: [],
             createdAt: Date.now(),
         };
         this.tasks.push(task);
@@ -202,6 +246,8 @@ export class KanbanBoard {
         window.dispatchEvent(new CustomEvent('kaizen-state-change'));
     }
 
+    // ─── Render ──────────────────────────────────────────────────────────
+
     render() {
         const statuses: KanbanTask['status'][] = ['backlog', 'doing', 'review', 'done'];
         for (const status of statuses) {
@@ -223,6 +269,14 @@ export class KanbanBoard {
             }
 
             if (inlineAdd) column.appendChild(inlineAdd);
+
+            // Update column count in header
+            const colEl = column.closest('.kanban-column');
+            const countBadge = colEl?.querySelector('.column-count') as HTMLElement;
+            if (countBadge) {
+                countBadge.textContent = `${tasksForStatus.length}`;
+                countBadge.style.display = tasksForStatus.length > 0 ? '' : 'none';
+            }
         }
 
         const statusTasks = document.getElementById('status-tasks');
@@ -233,24 +287,56 @@ export class KanbanBoard {
         }
     }
 
+    // ─── Card Creation ───────────────────────────────────────────────────
+
     private createTaskCard(task: KanbanTask): HTMLElement {
         const card = document.createElement('div');
         card.className = 'task-card';
         card.draggable = true;
         card.dataset.taskId = task.id;
 
-        // Show Jira key badge if linked (escaped to prevent XSS)
-        const jiraKey = (task as any).jiraKey;
-        const jiraBadge = jiraKey ? `<span class="task-jira-badge">${this.escapeHtml(jiraKey)}</span>` : '';
+        // Priority dot
+        const priority = task.priority || 'medium';
+        const pMeta = PRIORITY_META[priority] || PRIORITY_META.medium;
+
+        // Jira badge
+        const jiraBadge = task.jiraKey
+            ? `<span class="task-jira-badge">${this.escapeHtml(task.jiraKey)}</span>`
+            : '';
+
+        // Description preview (first line, max 60 chars)
+        const descPreview = task.description
+            ? this.escapeHtml(task.description.split('\n')[0].slice(0, 60))
+            : '';
+
+        // Labels
+        const labelsHtml = (task.labels || []).slice(0, 3).map(l =>
+            `<span class="task-label">${this.escapeHtml(l)}</span>`
+        ).join('');
+
+        // Task age
+        const age = this.formatAge(task.createdAt);
 
         card.innerHTML = `
-      <span class="task-card-title">${this.escapeHtml(task.title)}</span>
-      ${jiraBadge}
-      <div class="task-card-actions">
-        <button class="task-card-spawn" title="Spawn agent for this task">⚡</button>
-        <button class="task-card-delete" title="Delete task">✕</button>
-      </div>
-    `;
+            <div class="task-card-row">
+                <span class="priority-dot priority-${priority}" title="${pMeta.label} priority"></span>
+                <span class="task-card-title">${this.escapeHtml(task.title)}</span>
+            </div>
+            ${descPreview ? `<div class="task-card-desc">${descPreview}</div>` : ''}
+            <div class="task-card-footer">
+                <div class="task-card-tags">
+                    ${jiraBadge}
+                    ${labelsHtml}
+                </div>
+                <div class="task-card-meta-right">
+                    <span class="task-card-age">${age}</span>
+                    <div class="task-card-actions">
+                        <button class="task-card-spawn" title="Spawn agent for this task">⚡</button>
+                        <button class="task-card-delete" title="Delete task">✕</button>
+                    </div>
+                </div>
+            </div>
+        `;
 
         // Single-click: open detail drawer
         card.addEventListener('click', (e) => {
@@ -311,12 +397,25 @@ export class KanbanBoard {
         return card;
     }
 
+    // ─── Helpers ─────────────────────────────────────────────────────────
+
+    private formatAge(timestamp: number): string {
+        const diff = Date.now() - timestamp;
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'now';
+        if (mins < 60) return `${mins}m`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h`;
+        const days = Math.floor(hrs / 24);
+        return `${days}d`;
+    }
+
     getTasks(): KanbanTask[] {
         return [...this.tasks];
     }
 
-    /** Fix 4: Update task from detail drawer */
-    updateTaskDetails(id: string, updates: Partial<KanbanTask & { description: string; priority: string }>) {
+    /** Update task from detail drawer */
+    updateTaskDetails(id: string, updates: Partial<KanbanTask>) {
         const task = this.tasks.find(t => t.id === id);
         if (!task) return;
         Object.assign(task, updates);
