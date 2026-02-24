@@ -113,18 +113,25 @@ function ensureKaizenDir() {
 
 function loadTasks() {
     ensureKaizenDir();
-    if (!fs.existsSync(TASKS_FILE)) return [];
-    try {
-        return JSON.parse(fs.readFileSync(TASKS_FILE, 'utf-8'));
-    } catch (err) {
-        sendError(`Failed to parse tasks file: ${err.message}`);
-        return [];
-    }
+    // Read with fallback to .tmp if main file is corrupt
+    const tryRead = (filePath) => {
+        try {
+            if (fs.existsSync(filePath)) {
+                const content = fs.readFileSync(filePath, 'utf-8');
+                return JSON.parse(content);
+            }
+        } catch { /* corrupt / missing */ }
+        return null;
+    };
+    return tryRead(TASKS_FILE) ?? tryRead(TASKS_FILE + '.tmp') ?? [];
 }
 
 function saveTasks(tasks) {
     ensureKaizenDir();
-    fs.writeFileSync(TASKS_FILE, JSON.stringify(tasks, null, 2));
+    const tmpFile = TASKS_FILE + '.tmp';
+    // Atomic write: write to .tmp then rename
+    fs.writeFileSync(tmpFile, JSON.stringify(tasks, null, 2));
+    fs.renameSync(tmpFile, TASKS_FILE);
 }
 
 function watchTasksFile() {
@@ -677,6 +684,7 @@ async function ensureOllama() {
             env: { ...process.env },
         });
         ollamaServeProcess = ollamaServe;
+        ollamaStartedByUs = true; // we started it, so we'll kill it on quit
 
         // Wait for server to be ready (up to 10 seconds)
         for (let i = 0; i < 20; i++) {
@@ -777,8 +785,28 @@ async function ensureOllama() {
 
 // Track the ollama serve process so we can kill it on quit
 let ollamaServeProcess = null;
+let ollamaStartedByUs = false; // only kill if WE started it
 
 // ─── App Lifecycle ──────────────────────────────────────────────────────────
+
+const treeKill = require('tree-kill');
+
+async function killAllShells() {
+    const killPromises = [];
+    shells.forEach((term) => {
+        try {
+            if (term.pid) {
+                killPromises.push(new Promise(resolve => {
+                    treeKill(term.pid, 'SIGKILL', () => resolve());
+                }));
+            } else {
+                term.kill();
+            }
+        } catch { }
+    });
+    await Promise.allSettled(killPromises);
+    shells.clear();
+}
 
 app.whenReady().then(() => {
     cleanupOrphanedProcesses();
@@ -787,10 +815,19 @@ app.whenReady().then(() => {
     setTimeout(() => ensureOllama(), 3000);
 });
 
-app.on('window-all-closed', () => {
-    shells.forEach((term) => { try { term.kill(); } catch { } });
-    shells.clear();
+app.on('before-quit', async (e) => {
+    e.preventDefault();
+    // Kill all PTY child process trees
+    await killAllShells();
     cleanPidLock();
+    // Only kill Ollama if we started it (don't kill user's global Ollama)
+    if (ollamaStartedByUs && ollamaServeProcess) {
+        try { treeKill(ollamaServeProcess.pid, 'SIGKILL'); } catch { }
+    }
+    app.exit(0);
+});
+
+app.on('window-all-closed', () => {
     app.quit();
 });
 

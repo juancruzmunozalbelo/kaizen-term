@@ -65,6 +65,7 @@ export interface TerminalInstance {
 export class TerminalManager {
     private terminals: Map<string, TerminalInstance> = new Map();
     private activeId: string | null = null;
+    private watchingAgents: Set<string> = new Set();
     private onStatusChange?: (id: string, status: AgentConfig['status']) => void;
     private bridge = window.kaizenBridge;
     private ipcInitialized = false;
@@ -72,7 +73,7 @@ export class TerminalManager {
     // ANSI error pattern: red/bright-red sequences or common error keywords
     private static readonly ANSI_ERROR_RE = /\x1b\[(?:31|91|1;31)m|\b(error|Error|ERROR|FAILED|failed|exception|Exception)\b/;
     // Strip ANSI for last-line display
-    private static readonly ANSI_STRIP_RE = /\x1b\[[0-9;]*[a-zA-Z]/g;
+    private static readonly ANSI_STRIP_RE = /\x1b\[[\?]?[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b\(B/g;
     // Amber Alert: detect prompts waiting for user input
     private static readonly INPUT_BLOCKED_RE = /\?\s*$|\[y\/N\]|\[Y\/n\]|password:|Password:|passphrase:|Enter.*:|Select.*:|Press.*continue|\(yes\/no\)/i;
     // Shell prompt detection for pseudo-blocks / agent status
@@ -146,6 +147,17 @@ export class TerminalManager {
             inst.element.querySelector('.panel-dot')?.classList.add('error-pulse');
             // Fix #10: emit event so nav tabs can update in real-time
             window.dispatchEvent(new CustomEvent('kaizen-terminal-error', { detail: { id } }));
+            // Sprint E: Watch Mode — native notification
+            if (this.watchingAgents.has(id)) {
+                const agentName = inst.agent.name || id;
+                const errorLine = lines[lines.length - 1] || 'Error detected';
+                try {
+                    new Notification(`⚠ ${agentName}`, {
+                        body: errorLine.slice(0, 100),
+                        silent: false,
+                    });
+                } catch { /* notifications not supported */ }
+            }
         }
 
         // Activity indicator for non-focused panels
@@ -257,13 +269,18 @@ export class TerminalManager {
                 brightCyan: '#4dddff',
                 brightWhite: '#ffffff',
             },
-            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-            fontSize: 13,
-            lineHeight: 1.4,
+            fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
+            fontSize: 13.5,
+            fontWeight: '400',
+            fontWeightBold: '600',
+            letterSpacing: 0,
+            lineHeight: 1.3,
             cursorBlink: true,
             cursorStyle: 'bar',
+            cursorWidth: 2,
             scrollback: 5000,
             allowProposedApi: true,
+            overviewRulerWidth: 0,
         });
 
         const fitAddon = new FitAddon();
@@ -285,6 +302,7 @@ export class TerminalManager {
         <span class="panel-status status-cycle status-idle" data-term-id="${agent.id}">idle</span>
         <span class="panel-lastline" title="Last terminal output"></span>
         <div class="panel-actions">
+          <button class="panel-action-btn watch" title="Watch Mode: notify on errors">👁</button>
           <button class="panel-action-btn maximize" title="Maximize">⤢</button>
           <button class="panel-action-btn close" title="Close">✕</button>
         </div>
@@ -362,6 +380,8 @@ export class TerminalManager {
                 this.showDeadShellOverlay(inst, agent);
             } else {
                 this.onStatusChange?.(agent.id, 'idle');
+                // Discoverability: show a subtle hint overlay for new users
+                this.showDiscoverabilityHint(inst);
             }
         });
 
@@ -447,6 +467,27 @@ export class TerminalManager {
             requestAnimationFrame(() => {
                 try { fitAddon.fit(); } catch { }
             });
+        });
+
+        // Sprint E: Watch Mode button
+        const watchBtn = panel.querySelector('.panel-action-btn.watch') as HTMLElement;
+        watchBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (this.watchingAgents.has(agent.id)) {
+                this.watchingAgents.delete(agent.id);
+                watchBtn.style.color = '';
+                watchBtn.style.textShadow = '';
+                watchBtn.title = 'Watch Mode: notify on errors';
+            } else {
+                this.watchingAgents.add(agent.id);
+                watchBtn.style.color = '#00e5ff';
+                watchBtn.style.textShadow = '0 0 8px rgba(0,229,255,0.6)';
+                watchBtn.title = 'Watch Mode: ON (click to disable)';
+                // Request notification permission
+                if (Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+            }
         });
 
         this.setActive(agent.id);
@@ -565,6 +606,104 @@ export class TerminalManager {
         setTimeout(() => input.focus(), 50);
     }
 
+    /** Discoverability: show hint overlay for new users */
+    private showDiscoverabilityHint(inst: TerminalInstance) {
+        // Check if user has permanently hidden hints
+        if (localStorage.getItem('kaizen-hide-hints') === '1') return;
+
+        const hint = document.createElement('div');
+        hint.className = 'kaizen-hint';
+        hint.innerHTML = `
+            <span style="opacity:0.5">💡</span>
+            <span><kbd>#</kbd> AI Chat</span>
+            <span style="opacity:0.3">·</span>
+            <span><kbd>⌘K</kbd> Command Palette</span>
+            <span style="opacity:0.3">·</span>
+            <span><kbd>👁</kbd> Watch Mode</span>
+            <span style="opacity:0.15; margin-left: 6px">|</span>
+            <label class="hint-hide-label">
+                <input type="checkbox" class="hint-hide-check" />
+                <span>Don't show again</span>
+            </label>
+        `;
+        hint.style.cssText = `
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: rgba(8, 10, 22, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 6px 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            color: rgba(232,232,240,0.6);
+            transition: opacity 0.5s ease;
+        `;
+
+        const body = inst.element.querySelector('.panel-body') as HTMLElement;
+        if (!body) return;
+        body.style.position = 'relative';
+        body.appendChild(hint);
+
+        // Style kbd tags
+        hint.querySelectorAll('kbd').forEach(kbd => {
+            (kbd as HTMLElement).style.cssText = `
+                background: rgba(0, 229, 255, 0.15);
+                color: #00e5ff;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 11px;
+            `;
+        });
+
+        // Style the checkbox label
+        const label = hint.querySelector('.hint-hide-label') as HTMLElement;
+        if (label) {
+            label.style.cssText = `
+                display: flex; align-items: center; gap: 4px;
+                cursor: pointer; opacity: 0.5; font-size: 11px;
+                transition: opacity 0.2s;
+            `;
+            label.addEventListener('mouseenter', () => label.style.opacity = '1');
+            label.addEventListener('mouseleave', () => label.style.opacity = '0.5');
+        }
+
+        // Checkbox handler: save preference
+        const checkbox = hint.querySelector('.hint-hide-check') as HTMLInputElement;
+        if (checkbox) {
+            checkbox.style.cssText = `accent-color: #00e5ff; cursor: pointer;`;
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    localStorage.setItem('kaizen-hide-hints', '1');
+                    fadeOut();
+                } else {
+                    localStorage.removeItem('kaizen-hide-hints');
+                }
+            });
+        }
+
+        // Auto-fade after 12s (longer now since user might interact with checkbox)
+        const fadeOut = () => {
+            hint.style.opacity = '0';
+            setTimeout(() => hint.remove(), 500);
+        };
+        const timer = setTimeout(fadeOut, 12000);
+
+        // Also fade on first keypress
+        const onData = inst.terminal.onData(() => {
+            clearTimeout(timer);
+            onData.dispose();
+            fadeOut();
+        });
+    }
+
     /** Fix 6: Send data to all active terminals */
     broadcastToAll(data: string) {
         this.terminals.forEach((inst) => {
@@ -572,51 +711,145 @@ export class TerminalManager {
         });
     }
 
-    /** Feature 3: Write data to a specific terminal */
-    private inputBuffers: Map<string, string> = new Map();
+    /** NL Overlay: show floating input when user types # */
+    private nlOverlay: HTMLElement | null = null;
+    private nlActiveAgentId: string | null = null;
 
-    writeToTerminal(id: string, data: string) {
-        // Phase 9: NL→Command — buffer input, check on Enter
-        if (data === '\r') {
-            const buffer = this.inputBuffers.get(id) || '';
-            this.inputBuffers.set(id, '');
+    private showNLOverlay(id: string) {
+        this.nlActiveAgentId = id;
+        const inst = this.terminals.get(id);
+        if (!inst || this.nlOverlay) return;
 
-            if (buffer.startsWith('#') && buffer.length > 1) {
-                // Clear typed line (Ctrl+U) and intercept
-                this.bridge.writeTerminal(id, '\x15');
-                const cleanStr = buffer.startsWith('# ') ? buffer.slice(2) : buffer.slice(1);
-                window.dispatchEvent(new CustomEvent('kaizen-nl-command', {
-                    detail: { agentId: id, naturalLanguage: cleanStr.trim() }
-                }));
-                return;
+        const overlay = document.createElement('div');
+        overlay.id = 'nl-input-overlay';
+        overlay.innerHTML = `
+            <span class="nl-prefix">🤖 AI</span>
+            <span class="nl-hash">#</span>
+            <input type="text" id="nl-input-field" placeholder="Ask anything or describe a command..." autocomplete="off" spellcheck="false" />
+            <span class="nl-hint">Enter to send · Esc to cancel</span>
+        `;
+
+        // Position relative to terminal element
+        const termRect = inst.element.getBoundingClientRect();
+        overlay.style.cssText = `
+            position: fixed;
+            bottom: ${window.innerHeight - termRect.bottom + 8}px;
+            left: ${termRect.left + 12}px;
+            width: ${termRect.width - 24}px;
+            z-index: 3000;
+            background: rgba(8, 10, 22, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 229, 255, 0.5);
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(0,229,255,0.15);
+            font-family: 'JetBrains Mono', monospace;
+        `;
+
+        document.body.appendChild(overlay);
+        this.nlOverlay = overlay;
+
+        // Dim + blur the terminal to indicate AI mode
+        const termContainer = inst.element.querySelector('.xterm') as HTMLElement;
+        if (termContainer) {
+            termContainer.style.transition = 'filter 0.2s, opacity 0.2s';
+            termContainer.style.filter = 'blur(2px)';
+            termContainer.style.opacity = '0.4';
+        }
+
+        const input = overlay.querySelector('#nl-input-field') as HTMLInputElement;
+        if (input) {
+            input.style.cssText = `
+                flex: 1;
+                background: transparent;
+                border: none;
+                outline: none;
+                color: #00e5ff;
+                font-size: 14px;
+                font-family: inherit;
+                caret-color: #00e5ff;
+            `;
+            input.focus();
+            // Beat xterm's focus steal with a delayed re-focus
+            requestAnimationFrame(() => input.focus());
+            setTimeout(() => input.focus(), 50);
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const text = input.value.trim();
+                    this.hideNLOverlay();
+                    if (text) {
+                        window.dispatchEvent(new CustomEvent('kaizen-nl-command', {
+                            detail: { agentId: id, naturalLanguage: text }
+                        }));
+                    }
+                    // Restore focus to terminal
+                    inst.terminal.focus();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.hideNLOverlay();
+                    inst.terminal.focus();
+                }
+                e.stopPropagation();
+            });
+        }
+    }
+
+    private hideNLOverlay() {
+        // Restore terminal from dim/blur
+        if (this.nlActiveAgentId) {
+            const inst = this.terminals.get(this.nlActiveAgentId);
+            if (inst) {
+                const termContainer = inst.element.querySelector('.xterm') as HTMLElement;
+                if (termContainer) {
+                    termContainer.style.filter = '';
+                    termContainer.style.opacity = '';
+                }
             }
-            this.bridge.writeTerminal(id, data);
-            return;
         }
-
-        // Backspace: remove last buffered char
-        if (data === '\x7f') {
-            const buf = this.inputBuffers.get(id) || '';
-            this.inputBuffers.set(id, buf.slice(0, -1));
-            this.bridge.writeTerminal(id, data);
-            return;
+        if (this.nlOverlay) {
+            this.nlOverlay.remove();
+            this.nlOverlay = null;
         }
+        this.nlActiveAgentId = null;
+    }
 
-        // Buffer printable characters
-        if (data.length === 1 && data.charCodeAt(0) >= 32) {
-            const buf = this.inputBuffers.get(id) || '';
-            this.inputBuffers.set(id, buf + data);
-        } else if (data.length > 1) {
-            // Pasted text or control sequence — reset buffer
-            this.inputBuffers.set(id, '');
+    /** Feature 3: Write data to a specific terminal */
+    writeToTerminal(id: string, data: string) {
+        // If NL overlay is active, don't send to shell
+        if (this.nlActiveAgentId === id) return;
+
+        // '#' key: open NL overlay instead of sending to shell
+        if (data === '#') {
+            this.showNLOverlay(id);
+            return;
         }
 
         this.bridge.writeTerminal(id, data);
     }
 
+
     /** Phase 9: Write raw data bypassing NL interception */
     writeRaw(id: string, data: string) {
         this.bridge.writeTerminal(id, data);
+    }
+
+    /** Write directly to xterm display (bypasses pty/shell entirely) */
+    writeToDisplay(id: string, data: string) {
+        const inst = this.terminals.get(id);
+        if (inst) {
+            inst.terminal.write(data);
+        }
+    }
+
+    /** Get terminal column count */
+    getCols(id: string): number {
+        const inst = this.terminals.get(id);
+        return inst ? inst.terminal.cols : 80;
     }
 
     /** Fix 7: Dead shell overlay for restored sessions */

@@ -322,36 +322,42 @@
       <div class="onboarding-step active" data-step="0">
         <div class="onboarding-icon">⚡</div>
         <h2>Welcome to KaizenTerm</h2>
-        <p>The first <strong>Terminal Orchestration Cockpit</strong> for the Vibe Coding era.</p>
+        <p>The <strong>Terminal Orchestration Cockpit</strong> — where developers command fleets, not type commands.</p>
         <div class="onboarding-pipeline">
-          📋 Kanban → ⚡ Agent → 🤖 AI Works → ✅ Auto-Done
+          📋 Kanban Task → ⚡ Spawn Agent → 🤖 AI Executes → 👁 Watch Mode → ✅ Done
         </div>
-        <p class="onboarding-sub">Stop typing commands. Start orchestrating agents.</p>
+        <p class="onboarding-sub">4 parallel agents · Built-in AI · Kanban board · MCP tools · All in one terminal.</p>
       </div>
       <div class="onboarding-step" data-step="1">
-        <div class="onboarding-icon">🗣️</div>
-        <h2>Natural Language Commands</h2>
-        <p>Type <code>#</code> followed by plain English in any terminal:</p>
-        <div class="onboarding-code"># start the database<br><span class="onboarding-result">→ docker-compose up -d
-            db</span></div>
-        <p class="onboarding-sub">AI translates. You press Enter.</p>
+        <div class="onboarding-icon">🤖</div>
+        <h2>AI-Powered Terminal</h2>
+        <p>Type <code>#</code> in any terminal to talk to your AI assistant:</p>
+        <div class="onboarding-code"># list all running docker containers sorted by memory<br><span
+            class="onboarding-result">→ docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}" | sort -k2
+            -hr</span></div>
+        <p class="onboarding-sub">AI translates natural language → shell commands. You review, it executes.</p>
       </div>
       <div class="onboarding-step" data-step="2">
         <div class="onboarding-icon">📡</div>
-        <h2>Multi-Agent @mentions</h2>
-        <p>Chat with context from multiple agents at once:</p>
-        <div class="onboarding-code">@frontend @backend why are there CORS errors?</div>
-        <p class="onboarding-sub">AI reads both terminals and gives a combined diagnosis.</p>
+        <h2>Multi-Agent Swarm</h2>
+        <p>Run <strong>4 agents in parallel</strong>, each in their own directory. Combine with:</p>
+        <div class="onboarding-code">
+          <strong>📋 Kanban Board</strong> — Drag tasks from Backlog → Doing → Done<br>
+          <strong>👁 Watch Mode</strong> — Click 👁 on any agent to get notified on errors<br>
+          <strong>📡 Broadcast</strong> — Send the same command to all agents at once<br>
+          <strong>🧰 MCP + Skills</strong> — Connect Jira, filesystem, and custom tools
+        </div>
+        <p class="onboarding-sub">Each agent monitors its own output, detects errors, and alerts you.</p>
       </div>
       <div class="onboarding-step" data-step="3">
         <div class="onboarding-icon">🚀</div>
         <h2>You're ready!</h2>
-        <p>Open the <strong>Kanban board</strong> (Cmd+K → "Toggle Kanban"), create a task, and hit ⚡ to spawn your
-          first agent.</p>
+        <p>Open the <strong>Kanban board</strong> (⌘B), create a task, and hit ⚡ to spawn your first agent.</p>
         <div class="onboarding-shortcuts">
-          <span><kbd>Cmd+K</kbd> Command Palette</span>
-          <span><kbd>#</kbd> Natural Language</span>
-          <span><kbd>@name</kbd> Mention Agent</span>
+          <span><kbd>⌘K</kbd> Command Palette</span>
+          <span><kbd>#</kbd> AI Chat</span>
+          <span><kbd>⌘1-4</kbd> Switch Agent</span>
+          <span><kbd>👁</kbd> Watch Mode</span>
         </div>
       </div>
       <div class="onboarding-nav">
@@ -361,7 +367,16 @@
           <span class="dot" data-dot="2"></span>
           <span class="dot" data-dot="3"></span>
         </div>
-        <button id="onboarding-next" class="onboarding-btn">Next →</button>
+        <div class="onboarding-actions">
+          <label class="onboarding-hide-label"
+            style="display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(232,232,240,0.4);cursor:pointer;">
+            <input type="checkbox" id="onboarding-hide-check" style="accent-color:#00e5ff;cursor:pointer;" />
+            Don't show again
+          </label>
+          <button id="onboarding-skip" class="onboarding-skip-btn"
+            style="background:none;border:none;color:rgba(232,232,240,0.4);font-size:12px;cursor:pointer;text-decoration:underline;">Skip</button>
+          <button id="onboarding-next" class="onboarding-btn">Next →</button>
+        </div>
       </div>
     </div>
   </div>

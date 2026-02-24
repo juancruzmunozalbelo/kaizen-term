@@ -436,16 +436,8 @@
 /* ─── Fix 8: Agent Nav Tabs ───────────────────────────────────────────────── */
 
 #agent-tabs {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    height: 32px;
-    padding: 0 8px;
-    background: var(--bg-surface);
-    border-bottom: 1px solid var(--border-color);
-    overflow-x: auto;
-    scrollbar-width: none;
-    flex-shrink: 0;
+    /* Hidden: navigation handled by right sidebar agent panels */
+    display: none !important;
 }
 
 #agent-tabs:empty {

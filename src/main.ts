@@ -199,10 +199,10 @@ class KaizenApp {
     // ─── Session Timer ──────────────────────────────────────────────
     setInterval(() => this.updateSessionTime(), 1000);
 
-    // ─── Phase 9: NL→Command (# prefix) ──────────────────────────────
+    // ─── Phase 9: # prefix → AI assistant (chat + shell commands) ─────
     window.addEventListener('kaizen-nl-command', (async (e: Event) => {
       const { agentId, naturalLanguage } = (e as CustomEvent).detail;
-      this.showToast('info', `🗣️ Translating: "${naturalLanguage}"...`);
+      this.showToast('info', `🗣️ "${naturalLanguage}"...`);
 
       try {
         const resp = await fetch(`${this.state.aiBaseUrl}/v1/chat/completions`, {
@@ -212,15 +212,19 @@ class KaizenApp {
             model: this.state.aiModel,
             messages: [
               {
-                role: 'system', content: `You are a shell command translator for macOS/Linux (zsh). Rules:
-1. If input describes a shell task → output ONLY the raw command, single line, no explanation
-2. If input is a greeting, question about you, or anything NOT a computer task → output NOTHING (empty string)
+                role: 'system', content: `You are KaizenTerm AI, a helpful terminal assistant running on macOS (zsh).
+RULES:
+1. If the user asks to DO something executable in the shell, respond ONLY with: CMD: <command>
+2. For everything else (greetings, questions, conversation, explanations), respond with plain text. Keep it short (1-2 sentences).
+3. NEVER use "echo" or "printf" to display text. Those are NOT valid responses for conversation.
+
 Examples:
-- "list files" → "ls -la"
-- "create folder test" → "mkdir test"
-- "hola" → ""
-- "hola que eres" → ""
-- "who are you" → ""` },
+- "list files" → "CMD: ls -la"
+- "create folder test" → "CMD: mkdir test"  
+- "what's my IP" → "CMD: curl -s ifconfig.me"
+- "hola" → "¡Hola! ¿En qué puedo ayudarte?"
+- "who are you" → "Soy KaizenTerm AI, tu asistente de terminal."
+- "what does ls do" → "ls lista los archivos del directorio actual."` },
               { role: 'user', content: naturalLanguage },
             ],
             stream: false,
@@ -229,21 +233,47 @@ Examples:
 
         if (!resp.ok) throw new Error(`${resp.status}`);
         const json = await resp.json();
-        const command = json.choices?.[0]?.message?.content?.trim();
+        let reply = json.choices?.[0]?.message?.content?.trim() || '';
 
-        // Validate: must be a single-line shell command
-        const isValidCommand = command && !command.includes('\n') && command.length < 300
-          && !command.toLowerCase().includes('command not recognized')
-          && !command.toLowerCase().includes('please provide');
-
-        if (isValidCommand) {
-          this.showToast('success', `💡 ${command}`);
-          this.terminalManager.writeRaw(agentId, command);
+        // Guard: if AI wrapped chat in CMD: echo, treat as chat response
+        if (reply.startsWith('CMD:')) {
+          const cmd = reply.slice(4).trim();
+          const echoMatch = cmd.match(/^echo\s+['"](.*)['"]$/i);
+          if (echoMatch) {
+            // It's a conversational echo — display as chat, not execute
+            reply = echoMatch[1];
+          } else {
+            this.showToast('success', `💡 ${cmd}`);
+            this.terminalManager.writeRaw(agentId, cmd);
+            reply = ''; // handled
+          }
+        }
+        if (reply) {
+          // Print AI response to xterm display with word-wrap
+          const C = '\x1b[36m', R = '\x1b[0m', B = '\x1b[1m', D = '\x1b[2m';
+          const cols = this.terminalManager.getCols(agentId);
+          const maxW = Math.max(cols - 4, 20);
+          const wrapped: string[] = [];
+          for (const raw of reply.split('\n')) {
+            let cur = '';
+            for (const w of raw.split(' ')) {
+              if (cur && cur.length + w.length + 1 > maxW) { wrapped.push(cur); cur = w; }
+              else { cur = cur ? `${cur} ${w}` : w; }
+            }
+            wrapped.push(cur || '');
+          }
+          const bw = Math.min(maxW + 2, cols - 2);
+          let o = `\r\n${D}${C}${'─'.repeat(bw)}${R}\r\n`;
+          for (const ln of wrapped) o += `${D}${C} ${R}${B}${C}${ln}${R}\r\n`;
+          o += `${D}${C}${'─'.repeat(bw)}${R}\r\n`;
+          this.terminalManager.writeToDisplay(agentId, o);
+          this.terminalManager.writeRaw(agentId, '\r');
         } else {
-          this.showToast('warning', '⚠️ Could not translate to a shell command. Try: # list files here');
+          this.terminalManager.writeToDisplay(agentId, `\r\n\x1b[2m\x1b[36m🤖 ...${'\x1b[0m'}\r\n`);
+          this.terminalManager.writeRaw(agentId, '\r');
         }
       } catch (err: any) {
-        this.showToast('warning', `⚠️ AI translation failed: ${err.message}`);
+        this.showToast('warning', `⚠️ AI error: ${err.message}`);
       }
     }) as EventListener);
 
@@ -462,6 +492,26 @@ Examples:
     this.scheduleStateSave();
   }
 
+  /** Sprint E: Switch to agent by 0-based index */
+  private switchToAgentByIndex(idx: number) {
+    const agent = this.state.agents[idx];
+    if (!agent) {
+      this.showToast('warning', `No Agent ${idx + 1} available`);
+      return;
+    }
+    this.terminalManager.setActive(agent.id);
+    this.refreshAgentTabs();
+    this.showToast('info', `Switched to ${agent.name}`);
+  }
+
+  /** Sprint E: Open AI chat overlay on active terminal */
+  private openAIChatOverlay() {
+    const activeId = this.terminalManager.getActiveId?.() || this.state.agents[0]?.id;
+    if (activeId) {
+      (this.terminalManager as any).showNLOverlay(activeId);
+    }
+  }
+
   private checkEmptyState() {
     const grid = document.getElementById('terminal-grid')!;
     if (this.state.agents.length === 0 && !grid.querySelector('.terminal-empty')) {
@@ -675,6 +725,15 @@ Examples:
       // Phase 10: Workspace Sharing
       { id: 'export-workspace', icon: '📦', title: 'Export Workspace', description: 'Save agents + tasks as .kaizen file to share', action: () => this.exportWorkspace(), keywords: ['export', 'share', 'workspace', 'save'] },
       { id: 'import-workspace', icon: '📥', title: 'Import Workspace', description: 'Load a .kaizen workspace file', action: () => this.importWorkspace(), keywords: ['import', 'load', 'workspace', 'open'] },
+      // Sprint E: Agent switching
+      { id: 'switch-agent-1', icon: '1️⃣', title: 'Switch to Agent 1', description: 'Focus Agent 1 terminal', shortcut: '⌘1', action: () => this.switchToAgentByIndex(0), keywords: ['agent', 'switch', 'terminal', 'one'] },
+      { id: 'switch-agent-2', icon: '2️⃣', title: 'Switch to Agent 2', description: 'Focus Agent 2 terminal', shortcut: '⌘2', action: () => this.switchToAgentByIndex(1), keywords: ['agent', 'switch', 'terminal', 'two'] },
+      { id: 'switch-agent-3', icon: '3️⃣', title: 'Switch to Agent 3', description: 'Focus Agent 3 terminal', shortcut: '⌘3', action: () => this.switchToAgentByIndex(2), keywords: ['agent', 'switch', 'terminal', 'three'] },
+      { id: 'switch-agent-4', icon: '4️⃣', title: 'Switch to Agent 4', description: 'Focus Agent 4 terminal', shortcut: '⌘4', action: () => this.switchToAgentByIndex(3), keywords: ['agent', 'switch', 'terminal', 'four'] },
+      // Sprint E: AI Chat from palette
+      { id: 'ai-chat', icon: '💬', title: 'AI Chat', description: 'Open # AI assistant overlay', shortcut: '#', action: () => this.openAIChatOverlay(), keywords: ['ai', 'chat', 'hash', 'ask', 'help', 'question'] },
+      // Sprint E: Toggle tools panel
+      { id: 'toggle-tools', icon: '🧰', title: 'Toggle Tools Panel', description: 'Show/hide MCP servers, skills & workflows', shortcut: '⌘T', action: () => this.toggleTools(), keywords: ['tools', 'mcp', 'sidebar', 'panel', 'skills'] },
     ]);
 
     // Init Omni-Agent drawer
@@ -1357,6 +1416,7 @@ ${codebaseStats?.symbols ? `\nProject has ${codebaseStats.files} indexed files a
 
   // BYOLLM: Configure AI provider
   private ollamaBanner: HTMLElement | null = null;
+  private aiReadyFired = false;
 
   private showOllamaDownloadBanner(progress: { status: string; percent?: number }) {
     if (!this.ollamaBanner) {
@@ -1381,10 +1441,13 @@ ${codebaseStats?.symbols ? `\nProject has ${codebaseStats.files} indexed files a
     if (label) label.textContent = progress.status || 'Downloading AI model...';
 
     if (pct >= 100 || progress.status?.includes('complete') || progress.status?.includes('ready')) {
+      if (!this.aiReadyFired) {
+        this.aiReadyFired = true;
+        this.showToast('success', '🤖 AI model ready!');
+      }
       setTimeout(() => {
         this.ollamaBanner?.remove();
         this.ollamaBanner = null;
-        this.showToast('success', '🤖 AI model ready! NL→Command enabled.');
       }, 1500);
     }
   }
@@ -1554,6 +1617,14 @@ ${codebaseStats?.symbols ? `\nProject has ${codebaseStats.files} indexed files a
     const steps = overlay.querySelectorAll('.onboarding-step');
     const dots = overlay.querySelectorAll('.onboarding-dots .dot');
     const nextBtn = document.getElementById('onboarding-next') as HTMLButtonElement;
+    const skipBtn = document.getElementById('onboarding-skip') as HTMLButtonElement;
+    const hideCheck = document.getElementById('onboarding-hide-check') as HTMLInputElement;
+
+    const dismiss = () => {
+      overlay.classList.add('hidden');
+      this.state.onboarded = true;
+      this.scheduleStateSave();
+    };
 
     const goToStep = (idx: number) => {
       steps.forEach(s => s.classList.remove('active'));
@@ -1573,10 +1644,17 @@ ${codebaseStats?.symbols ? `\nProject has ${codebaseStats.files} indexed files a
       if (currentStep < steps.length - 1) {
         goToStep(currentStep + 1);
       } else {
-        // Dismiss
-        overlay.classList.add('hidden');
-        this.state.onboarded = true;
-        this.scheduleStateSave();
+        dismiss();
+      }
+    });
+
+    // Skip button: dismiss immediately
+    skipBtn?.addEventListener('click', () => dismiss());
+
+    // Don't show again checkbox
+    hideCheck?.addEventListener('change', () => {
+      if (hideCheck.checked) {
+        dismiss();
       }
     });
 

@@ -15,9 +15,13 @@
   <img src="https://img.shields.io/badge/Electron-33+-47848F?logo=electron&logoColor=white" alt="Electron">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Ollama-Enabled-FF6F00" alt="Ollama">
+  <img src="https://img.shields.io/badge/Status-Open_Alpha-orange" alt="Open Alpha">
 </p>
 
 ---
+
+> [!WARNING]
+> **Open Alpha** — KaizenTerm is in active development. APIs, features, and UI may change between releases. Feedback and contributions welcome!
 
 ## ✨ What is KaizenTerm?
 
