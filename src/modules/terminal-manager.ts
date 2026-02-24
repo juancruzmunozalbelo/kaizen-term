@@ -73,7 +73,7 @@ export class TerminalManager {
     // ANSI error pattern: red/bright-red sequences or common error keywords
     private static readonly ANSI_ERROR_RE = /\x1b\[(?:31|91|1;31)m|\b(error|Error|ERROR|FAILED|failed|exception|Exception)\b/;
     // Strip ANSI for last-line display
-    private static readonly ANSI_STRIP_RE = /\x1b\[[\?]?[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b\(B/g;
+    private static readonly ANSI_STRIP_RE = /\x1b\[\?]?[0-9;]*[a-zA-Z]|\x1b\](?:[^\x07\x1b]*(?:\x07|\x1b\\))|\x1b\][^\x07]*$|\x1b\(B/g;
     // Amber Alert: detect prompts waiting for user input
     private static readonly INPUT_BLOCKED_RE = /\?\s*$|\[y\/N\]|\[Y\/n\]|password:|Password:|passphrase:|Enter.*:|Select.*:|Press.*continue|\(yes\/no\)/i;
     // Shell prompt detection for pseudo-blocks / agent status
