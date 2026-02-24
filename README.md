@@ -112,6 +112,16 @@ kaizen-term/
 └── package.json
 ```
 
+## 🌐 Ecosystem
+
+KaizenTerm is part of a suite of open-source AI development tools:
+
+| Project | Description |
+|---|---|
+| [🖥️ KaizenTerm](https://github.com/juancruzmunozalbelo/kaizen-term) | Multi-agent terminal orchestrator (you are here) |
+| [🐾 SwarmClaw](https://github.com/juancruzmunozalbelo/swarmclaw) | Autonomous multi-agent swarm control plane |
+| [🏛️ SwarmDash](https://github.com/juancruzmunozalbelo/swarmdash) | Real-time AI agent dashboard |
+
 ## 🤝 Contributing
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
