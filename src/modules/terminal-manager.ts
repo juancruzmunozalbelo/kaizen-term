@@ -56,6 +56,9 @@ export interface TerminalInstance {
     fitAddon: FitAddon;
     searchAddon: SearchAddon;
     element: HTMLElement;
+    // WebGL addon tracking for context recovery
+    webglAddon: WebglAddon | null;
+    webglLost: boolean;
     // Phase 8: Block tracking
     blocks: CommandBlock[];
     currentBlock: CommandBlock | null;
@@ -322,15 +325,7 @@ export class TerminalManager {
         terminal.open(mount);
 
         // Feature 1: GPU-accelerated WebGL rendering with canvas fallback
-        try {
-            const webglAddon = new WebglAddon();
-            webglAddon.onContextLoss(() => {
-                webglAddon.dispose();
-            });
-            terminal.loadAddon(webglAddon);
-        } catch {
-            // WebGL not supported — falls back to canvas renderer automatically
-        }
+        // WebGL addon is attached after inst is created (see below)
 
         // Phase 6: Search addon
         const searchAddon = new SearchAddon();
@@ -355,10 +350,15 @@ export class TerminalManager {
             fitAddon,
             searchAddon,
             element: panel,
+            webglAddon: null,
+            webglLost: false,
             blocks: [],
             currentBlock: null,
             lineBuffer: '',
         };
+
+        // Attach WebGL addon (stored on inst for context recovery)
+        this.attachWebGL(inst);
 
         this.terminals.set(agent.id, inst);
 
@@ -494,13 +494,39 @@ export class TerminalManager {
         return inst;
     }
 
+    /** Attach or re-attach the WebGL addon to a terminal instance */
+    private attachWebGL(inst: TerminalInstance) {
+        try {
+            const addon = new WebglAddon();
+            addon.onContextLoss(() => {
+                addon.dispose();
+                inst.webglAddon = null;
+                inst.webglLost = true;
+            });
+            inst.terminal.loadAddon(addon);
+            inst.webglAddon = addon;
+            inst.webglLost = false;
+        } catch {
+            // WebGL not supported — falls back to canvas renderer
+            inst.webglAddon = null;
+        }
+    }
+
     setActive(id: string) {
         this.activeId = id;
         this.terminals.forEach((inst) => {
             const isActive = inst.id === id;
             inst.element.classList.toggle('active', isActive);
             if (isActive) {
+                // Recover WebGL if context was lost (e.g., panel was display:none in layout-1)
+                if (inst.webglLost && !inst.webglAddon) {
+                    requestAnimationFrame(() => this.attachWebGL(inst));
+                }
                 inst.terminal.focus();
+                // Re-fit to ensure proper rendering after becoming visible
+                requestAnimationFrame(() => {
+                    try { inst.fitAddon.fit(); } catch { }
+                });
                 // Clear error glow and activity indicators when panel is focused
                 inst.element.querySelector('.panel-header')?.classList.remove('has-errors', 'has-activity', 'is-blocked');
                 inst.element.querySelector('.panel-dot')?.classList.remove('error-pulse', 'blocked-pulse');
