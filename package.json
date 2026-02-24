@@ -1,0 +1,68 @@
+{
+  "name": "kaizen-term",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "npx concurrently -n 'vite,electron' -c 'cyan,magenta' 'vite' 'sleep 2 && VITE_DEV_SERVER_URL=http://localhost:5173 electron .'",
+    "build": "vite build && electron-builder --mac",
+    "build:web": "vite build",
+    "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.kaizen.term",
+    "productName": "KaizenTerm",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": "dmg",
+      "icon": null,
+      "darkModeSupport": true
+    },
+    "dmg": {
+      "title": "KaizenTerm",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 140,
+          "y": 200
+        },
+        {
+          "x": 400,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "node_modules/node-pty/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "electron": "^40.6.0",
+    "electron-builder": "^26.8.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-image": "^0.9.0",
+    "@xterm/addon-search": "^0.16.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/addon-webgl": "^0.19.0",
+    "@xterm/xterm": "^6.0.0",
+    "node-pty": "^1.2.0-beta.11",
+    "split.js": "^1.6.5",
+    "xterm": "^5.3.0"
+  }
+}

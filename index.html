@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="KaizenTerm — Distraction-free terminal workspace for focused multi-agent vibe coding with Kaizen methodology" />
+  <title>KaizenTerm</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <!-- AI Loading Overlay -->
+  <div id="ai-loading-overlay">
+    <div class="ai-loading-card">
+      <div class="ai-loading-logo">
+        <svg viewBox="0 0 60 60" width="56" height="56">
+          <defs>
+            <linearGradient id="load-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#00e5ff" />
+              <stop offset="100%" style="stop-color:#ff006e" />
+            </linearGradient>
+          </defs>
+          <circle cx="30" cy="30" r="24" fill="none" stroke="url(#load-grad)" stroke-width="3" stroke-dasharray="120 30"
+            stroke-linecap="round" class="ai-loading-ring" />
+          <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-size="22"
+            fill="url(#load-grad)">⚡</text>
+        </svg>
+      </div>
+      <h2 class="ai-loading-title">KaizenTerm</h2>
+      <p id="ai-loading-status" class="ai-loading-status">Starting AI model...</p>
+      <div class="ai-loading-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+  <div id="app">
+    <!-- Top Bar -->
+    <header id="top-bar">
+      <div class="top-bar-left">
+        <div class="logo" id="logo">
+          <svg viewBox="0 0 40 40" width="28" height="28">
+            <circle cx="20" cy="20" r="16" fill="none" stroke="url(#enso-grad)" stroke-width="2.5"
+              stroke-dasharray="90 10" stroke-linecap="round" />
+            <defs>
+              <linearGradient id="enso-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#00e5ff" />
+                <stop offset="100%" stop-color="#ff006e" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="logo-text">KaizenTerm</span>
+        </div>
+        <nav class="layout-controls">
+          <button class="layout-btn active" data-layout="1" title="Single pane">
+            <svg viewBox="0 0 16 16" width="14" height="14">
+              <rect x="1" y="1" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5" />
+            </svg>
+          </button>
+          <button class="layout-btn" data-layout="2" title="Two panes">
+            <svg viewBox="0 0 16 16" width="14" height="14">
+              <rect x="1" y="1" width="6" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" />
+              <rect x="9" y="1" width="6" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" />
+            </svg>
+          </button>
+          <button class="layout-btn" data-layout="3" title="Main + Sides">
+            <svg viewBox="0 0 16 16" width="14" height="14">
+              <rect x="1" y="1" width="9" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" />
+              <rect x="11.5" y="1" width="3.5" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2" />
+              <rect x="11.5" y="9" width="3.5" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2" />
+            </svg>
+          </button>
+          <button class="layout-btn" data-layout="4" title="Four panes">
+            <svg viewBox="0 0 16 16" width="14" height="14">
+              <rect x="1" y="1" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" />
+              <rect x="9" y="1" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" />
+              <rect x="1" y="9" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" />
+              <rect x="9" y="9" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" />
+            </svg>
+          </button>
+          <button class="layout-btn" data-layout="6" title="Six panes">
+            <svg viewBox="0 0 16 16" width="14" height="14">
+              <rect x="1" y="1" width="4" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2" />
+              <rect x="6" y="1" width="4" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2" />
+              <rect x="11" y="1" width="4" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2" />
+              <rect x="1" y="9" width="4" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2" />
+              <rect x="6" y="9" width="4" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2" />
+              <rect x="11" y="9" width="4" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2" />
+            </svg>
+          </button>
+        </nav>
+        <button id="tools-toggle" class="action-btn tools-btn" title="Tools & MCP (Ctrl+T)">
+          <span class="btn-icon">🔧</span> Tools
+        </button>
+      </div>
+      <div class="top-bar-center">
+        <button id="add-agent-btn" class="action-btn" title="Add Agent (Ctrl+N)">
+          <span class="btn-icon">+</span> New Agent
+        </button>
+        <button id="zen-mode-btn" class="action-btn zen" title="Zen Mode (Ctrl+Shift+Z)">
+          <span class="btn-icon">◎</span> Zen
+        </button>
+        <button id="cmd-palette-btn" class="action-btn" title="Command Palette (Ctrl+K)">
+          <span class="btn-icon">⌘</span> <span class="shortcut">Ctrl+K</span>
+        </button>
+      </div>
+      <div class="top-bar-right">
+        <div id="focus-timer" class="timer-display">
+          <button id="timer-toggle" class="timer-btn" title="Start/Stop Timer">▶</button>
+          <span id="timer-value">25:00</span>
+          <span id="timer-cycles" class="timer-cycles">0 cycles</span>
+        </div>
+        <button id="kanban-toggle" class="action-btn kanban-btn" title="Toggle Kanban (Ctrl+B)">
+          <span class="btn-icon">☰</span> Kanban
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="workspace">
+      <!-- Skills / MCP Sidebar (Left) -->
+      <aside id="tools-sidebar" class="tools-sidebar hidden">
+        <div class="tools-header">
+          <h2>Tools</h2>
+          <button id="tools-close" class="close-btn">✕</button>
+        </div>
+
+        <div class="tools-section" id="mcp-section">
+          <div class="tools-section-header">
+            <span class="tools-section-icon">🔌</span>
+            <h3>MCP Servers</h3>
+            <button id="mcp-refresh" class="tools-refresh-btn" title="Refresh">⟲</button>
+          </div>
+          <div class="tools-list" id="mcp-list">
+            <div class="tools-empty">Scanning...</div>
+          </div>
+        </div>
+
+        <div class="tools-section" id="skills-section">
+          <div class="tools-section-header">
+            <span class="tools-section-icon">🔧</span>
+            <h3>Skills</h3>
+            <button id="skills-refresh" class="tools-refresh-btn" title="Refresh">⟲</button>
+          </div>
+          <div class="tools-list" id="skills-list">
+            <div class="tools-empty">Scanning...</div>
+          </div>
+        </div>
+
+        <div class="tools-section" id="workflows-section">
+          <div class="tools-section-header">
+            <span class="tools-section-icon">📋</span>
+            <h3>Workflows</h3>
+          </div>
+          <div class="tools-list" id="workflows-list">
+            <div class="tools-empty">Scanning...</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Agent Nav Tabs (Fix 8) -->
+      <div id="agent-tabs"></div>
+
+      <!-- Terminal Grid -->
+      <section id="terminal-grid" class="terminal-grid layout-1">
+        <!-- Terminals injected by JS -->
+      </section>
+
+      <!-- Kanban Sidebar -->
+      <aside id="kanban-sidebar" class="kanban-sidebar hidden">
+        <div class="kanban-header">
+          <h2>Kaizen Board</h2>
+          <button id="kanban-close" class="close-btn">✕</button>
+        </div>
+        <!-- Task Detail Drawer (Fix 4) -->
+        <div id="task-detail-drawer" class="task-detail-drawer hidden">
+          <div class="task-detail-header">
+            <button id="task-detail-close" class="task-detail-close" title="Close">← Back</button>
+          </div>
+          <div class="task-detail-body">
+            <input id="task-detail-title" class="task-detail-title" placeholder="Task title" />
+            <textarea id="task-detail-desc" class="task-detail-desc" placeholder="Add a description..."></textarea>
+            <div class="task-detail-meta">
+              <div class="task-detail-field">
+                <label>Status</label>
+                <select id="task-detail-status">
+                  <option value="backlog">Backlog</option>
+                  <option value="doing">In Progress</option>
+                  <option value="review">Review</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+              <div class="task-detail-field">
+                <label>Priority</label>
+                <select id="task-detail-priority">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div class="task-detail-field">
+                <label>Jira</label>
+                <span id="task-detail-jira" class="task-detail-jira-key">—</span>
+              </div>
+            </div>
+            <button id="task-detail-spawn" class="task-detail-spawn-btn">⚡ Spawn Agent for this Task</button>
+          </div>
+        </div>
+        <div class="kanban-columns">
+          <div class="kanban-column" data-status="backlog">
+            <div class="column-header">
+              <span class="column-dot backlog"></span>
+              <h3>Backlog</h3>
+              <button class="add-task-btn" data-status="backlog" title="Add task">+</button>
+            </div>
+            <div class="column-tasks" data-status="backlog"></div>
+          </div>
+          <div class="kanban-column" data-status="doing">
+            <div class="column-header">
+              <span class="column-dot doing"></span>
+              <h3>In Progress</h3>
+              <button class="add-task-btn" data-status="doing" title="Add task">+</button>
+            </div>
+            <div class="column-tasks" data-status="doing"></div>
+          </div>
+          <div class="kanban-column" data-status="review">
+            <div class="column-header">
+              <span class="column-dot review"></span>
+              <h3>Review</h3>
+              <button class="add-task-btn" data-status="review" title="Add task">+</button>
+            </div>
+            <div class="column-tasks" data-status="review"></div>
+          </div>
+          <div class="kanban-column" data-status="done">
+            <div class="column-header">
+              <span class="column-dot done"></span>
+              <h3>Done</h3>
+              <button class="add-task-btn" data-status="done" title="Add task">+</button>
+            </div>
+            <div class="column-tasks" data-status="done"></div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Command Palette Overlay -->
+    <div id="command-palette" class="command-palette hidden">
+      <div class="palette-backdrop"></div>
+      <div class="palette-dialog">
+        <input type="text" id="palette-input" class="palette-input" placeholder="Type a command..."
+          autocomplete="off" />
+        <ul id="palette-results" class="palette-results"></ul>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <footer id="status-bar">
+      <span id="status-agents" class="status-item">0 agents</span>
+      <span class="status-separator">│</span>
+      <span id="status-layout" class="status-item">1×1</span>
+      <span class="status-separator">│</span>
+      <span id="status-tasks" class="status-item">0 tasks</span>
+      <span class="status-separator">│</span>
+      <span id="status-ai" class="status-item status-ai-badge" title="AI Provider (click to configure)"
+        style="cursor:pointer">🤖 none</span>
+      <span class="status-separator">│</span>
+      <span id="status-git" class="status-item" title="Git branch"></span>
+      <span class="status-spacer"></span>
+      <!-- Alert History Bell -->
+      <span id="alert-bell" class="status-item alert-bell" title="Alert History">
+        🔔<span id="alert-badge" class="alert-badge hidden">0</span>
+      </span>
+      <div id="alert-history-panel" class="alert-history-panel hidden">
+        <div class="alert-history-header">
+          <span>🔔 Alert History</span>
+          <button id="alert-clear" class="alert-clear-btn">Clear</button>
+        </div>
+        <div id="alert-history-list" class="alert-history-list">
+          <div class="alert-empty">No alerts yet</div>
+        </div>
+      </div>
+      <span class="status-separator">│</span>
+      <span id="status-session" class="status-item">Session: --:--</span>
+      <span class="status-separator">│</span>
+      <span class="status-item kaizen-quote" id="kaizen-quote">改善 — Continuous Improvement</span>
+    </footer>
+
+    <!-- Omni-Agent Drawer (Feature 5) -->
+    <aside id="omni-agent-drawer" class="omni-drawer hidden">
+      <div class="omni-header">
+        <span class="omni-title">🤖 Agent Chat</span>
+        <button id="omni-close" class="omni-close-btn" title="Close">✕</button>
+      </div>
+      <div id="omni-messages" class="omni-messages">
+        <div class="omni-welcome">
+          <span class="omni-welcome-icon">🧠</span>
+          <p>Type a prompt below. It will be sent to the <strong>active terminal</strong> as input, or to an MCP agent
+            if configured.</p>
+        </div>
+      </div>
+      <div class="omni-input-area">
+        <textarea id="omni-input" class="omni-input" placeholder="Ask anything... (sent to active terminal)"
+          rows="2"></textarea>
+        <div class="omni-actions">
+          <button id="omni-send-ai" class="omni-btn ai" title="Ask AI (Ollama)">🤖 AI</button>
+          <button id="omni-send-mcp" class="omni-btn" title="Send with terminal context">🔌 MCP</button>
+          <button id="omni-send-terminal" class="omni-btn send" title="Send to active terminal">⏎ Terminal</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Phase 10: First-Run Onboarding -->
+  <div id="onboarding-overlay" class="onboarding-overlay hidden">
+    <div class="onboarding-card">
+      <div class="onboarding-step active" data-step="0">
+        <div class="onboarding-icon">⚡</div>
+        <h2>Welcome to KaizenTerm</h2>
+        <p>The first <strong>Terminal Orchestration Cockpit</strong> for the Vibe Coding era.</p>
+        <div class="onboarding-pipeline">
+          📋 Kanban → ⚡ Agent → 🤖 AI Works → ✅ Auto-Done
+        </div>
+        <p class="onboarding-sub">Stop typing commands. Start orchestrating agents.</p>
+      </div>
+      <div class="onboarding-step" data-step="1">
+        <div class="onboarding-icon">🗣️</div>
+        <h2>Natural Language Commands</h2>
+        <p>Type <code>#</code> followed by plain English in any terminal:</p>
+        <div class="onboarding-code"># start the database<br><span class="onboarding-result">→ docker-compose up -d
+            db</span></div>
+        <p class="onboarding-sub">AI translates. You press Enter.</p>
+      </div>
+      <div class="onboarding-step" data-step="2">
+        <div class="onboarding-icon">📡</div>
+        <h2>Multi-Agent @mentions</h2>
+        <p>Chat with context from multiple agents at once:</p>
+        <div class="onboarding-code">@frontend @backend why are there CORS errors?</div>
+        <p class="onboarding-sub">AI reads both terminals and gives a combined diagnosis.</p>
+      </div>
+      <div class="onboarding-step" data-step="3">
+        <div class="onboarding-icon">🚀</div>
+        <h2>You're ready!</h2>
+        <p>Open the <strong>Kanban board</strong> (Cmd+K → "Toggle Kanban"), create a task, and hit ⚡ to spawn your
+          first agent.</p>
+        <div class="onboarding-shortcuts">
+          <span><kbd>Cmd+K</kbd> Command Palette</span>
+          <span><kbd>#</kbd> Natural Language</span>
+          <span><kbd>@name</kbd> Mention Agent</span>
+        </div>
+      </div>
+      <div class="onboarding-nav">
+        <div class="onboarding-dots">
+          <span class="dot active" data-dot="0"></span>
+          <span class="dot" data-dot="1"></span>
+          <span class="dot" data-dot="2"></span>
+          <span class="dot" data-dot="3"></span>
+        </div>
+        <button id="onboarding-next" class="onboarding-btn">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>

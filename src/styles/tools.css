@@ -1,0 +1,235 @@
+/* ════════════════════════════════════════════════════
+   Tools Sidebar (Left) — MCP & Skills
+   ════════════════════════════════════════════════════ */
+
+.tools-sidebar {
+    width: 280px;
+    min-width: 280px;
+    height: 100%;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: all var(--transition-normal);
+    z-index: 50;
+}
+
+.tools-sidebar.hidden {
+    width: 0;
+    min-width: 0;
+    border-right: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tools-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.tools-header h2 {
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--agent-cyan);
+    letter-spacing: 0.03em;
+}
+
+/* Section */
+.tools-section {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tools-section:last-child {
+    border-bottom: none;
+}
+
+.tools-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px 8px;
+}
+
+.tools-section-icon {
+    font-size: 14px;
+}
+
+.tools-section-header h3 {
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    flex: 1;
+}
+
+.tools-refresh-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    opacity: 0.5;
+    transition: all var(--transition-fast);
+}
+
+.tools-refresh-btn:hover {
+    opacity: 1;
+    background: var(--bg-elevated);
+    color: var(--agent-cyan);
+}
+
+/* Items */
+.tools-list {
+    padding: 0 8px;
+}
+
+.tools-empty {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.5;
+    padding: 8px;
+    text-align: center;
+}
+
+.tool-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: 1px solid transparent;
+}
+
+.tool-item:hover {
+    background: var(--bg-elevated);
+    border-color: var(--border-color);
+}
+
+.tool-item:active {
+    transform: scale(0.98);
+}
+
+.tool-item-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tool-item-icon.mcp {
+    background: rgba(0, 229, 255, 0.08);
+    border-color: rgba(0, 229, 255, 0.15);
+}
+
+.tool-item-icon.skill {
+    background: rgba(168, 85, 247, 0.08);
+    border-color: rgba(168, 85, 247, 0.15);
+}
+
+.tool-item-icon.workflow {
+    background: rgba(6, 214, 160, 0.08);
+    border-color: rgba(6, 214, 160, 0.15);
+}
+
+.tool-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.tool-item-name {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tool-item-desc {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.7;
+}
+
+.tool-item-badge {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+.tool-item-badge.online {
+    background: rgba(6, 214, 160, 0.15);
+    color: var(--agent-green);
+    border: 1px solid rgba(6, 214, 160, 0.25);
+}
+
+.tool-item-badge.config {
+    background: rgba(255, 190, 11, 0.1);
+    color: var(--agent-yellow);
+    border: 1px solid rgba(255, 190, 11, 0.2);
+}
+
+.tool-item-badge.installed {
+    background: rgba(0, 229, 255, 0.1);
+    color: var(--agent-cyan);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+/* Count badge */
+.tools-count {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    background: var(--bg-elevated);
+    padding: 0 6px;
+    border-radius: 8px;
+    margin-left: auto;
+    opacity: 0.6;
+}
+
+/* Zen mode hides sidebar */
+.zen-active .tools-sidebar {
+    width: 0;
+    min-width: 0;
+    border-right: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Workspace flex layout */
+#workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}

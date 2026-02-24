@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "name": "python-data-science",
+  "exportedAt": "2026-02-24T00:00:00.000Z",
+  "agents": [
+    { "name": "jupyter", "color": "#ffbe0b", "cwd": "~" },
+    { "name": "data-pipeline", "color": "#06d6a0", "cwd": "~" },
+    { "name": "model-training", "color": "#00e5ff", "cwd": "~" }
+  ],
+  "tasks": [
+    { "title": "Clean raw dataset", "status": "backlog" },
+    { "title": "Exploratory Data Analysis", "status": "backlog" },
+    { "title": "Train RandomForest model", "status": "backlog" },
+    { "title": "Evaluate metrics", "status": "backlog" }
+  ],
+  "config": {
+    "theme": "daylight",
+    "defaultAgentCommand": "source venv/bin/activate && python -m pytest",
+    "layout": 4
+  }
+}

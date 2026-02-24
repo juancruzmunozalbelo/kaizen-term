@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "name": "rust-cli",
+  "exportedAt": "2026-02-24T00:00:00.000Z",
+  "agents": [
+    { "name": "cargo-build", "color": "#ff006e", "cwd": "~" },
+    { "name": "cargo-test", "color": "#06d6a0", "cwd": "~" },
+    { "name": "clippy", "color": "#ffbe0b", "cwd": "~" }
+  ],
+  "tasks": [
+    { "title": "Setup Clap for CLI parsing", "status": "backlog" },
+    { "title": "Implement core logic", "status": "backlog" },
+    { "title": "Write unit tests", "status": "backlog" },
+    { "title": "Fix clippy warnings", "status": "backlog" }
+  ],
+  "config": {
+    "theme": "cyberpunk",
+    "defaultAgentCommand": "cargo",
+    "layout": 4
+  }
+}

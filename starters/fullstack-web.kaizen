@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "name": "fullstack-web",
+  "exportedAt": "2026-02-24T00:00:00.000Z",
+  "agents": [
+    { "name": "frontend", "color": "#00e5ff", "cwd": "~" },
+    { "name": "backend", "color": "#ff006e", "cwd": "~" },
+    { "name": "database", "color": "#ffbe0b", "cwd": "~" }
+  ],
+  "tasks": [
+    { "title": "Setup React app with Vite", "status": "backlog" },
+    { "title": "Initialize Express API", "status": "backlog" },
+    { "title": "Configure Postgres schema", "status": "backlog" },
+    { "title": "Connect frontend to backend", "status": "backlog" }
+  ],
+  "config": {
+    "theme": "midnight",
+    "defaultAgentCommand": "npm run dev",
+    "layout": 4
+  }
+}
