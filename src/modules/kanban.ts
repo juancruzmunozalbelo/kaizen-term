@@ -232,7 +232,10 @@ export class KanbanBoard {
             });
         });
 
+        let finished = false;
         const finish = () => {
+            if (finished) return;
+            finished = true;
             const title = input.value.trim();
             if (title) {
                 this.addTask(title, status, selectedPriority);
@@ -245,11 +248,11 @@ export class KanbanBoard {
             const related = e.relatedTarget as HTMLElement;
             if (related && wrapper.contains(related)) return;
             setTimeout(() => {
-                if (!wrapper.contains(document.activeElement)) finish();
+                if (!finished && !wrapper.contains(document.activeElement)) finish();
             }, 100);
         });
         input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') finish();
+            if (e.key === 'Enter') { e.preventDefault(); finish(); }
             if (e.key === 'Escape') { input.value = ''; finish(); }
         });
     }
@@ -471,18 +474,22 @@ export class KanbanBoard {
             input.focus();
             input.select();
 
+            let editDone = false;
             const finish = () => {
+                if (editDone) return;
+                editDone = true;
                 const newTitle = input.value.trim() || task.title;
                 task.title = newTitle;
                 this.render();
                 this.emitChange();
                 // Granular IPC: only update title
+                this.pendingWrite = true;
                 bridge?.updateTask?.(task.id, { title: newTitle });
             };
 
             input.addEventListener('blur', finish);
             input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') finish();
+                if (e.key === 'Enter') { e.preventDefault(); finish(); }
                 if (e.key === 'Escape') { input.value = task.title; finish(); }
             });
         });
