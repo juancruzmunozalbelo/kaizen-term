@@ -108,6 +108,10 @@ class KaizenApp {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); this.terminalManager.toggleSearch(); }
       // Global search across all terminals
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') { e.preventDefault(); this.showGlobalSearch(); }
+      // Quick command history
+      if (e.ctrlKey && e.key === 'ArrowUp') { e.preventDefault(); const aid = this.terminalManager.getActiveId(); if (aid) this.terminalManager.showCommandHistory(aid); }
+      // Env var manager
+      if ((e.ctrlKey || e.metaKey) && e.key === 'e') { e.preventDefault(); this.showEnvVarModal(); }
       // Fix 8: Escape key priority — omni > drawer > palette > zen, with early return
       if (e.key === 'Escape') {
         const omni = document.getElementById('omni-agent-drawer');
@@ -333,6 +337,9 @@ Examples:
     // Fix 8: initial tab render
     this.refreshAgentTabs();
 
+    // Session Persistence: restore saved agents
+    this.restoreSession();
+
     // Discover MCP/Skills
     setTimeout(() => this.runDiscovery(), 1500);
 
@@ -362,14 +369,112 @@ Examples:
   // ─── Agent Management ──────────────────────────────────────────────
 
   addAgent(name?: string, taskContext?: { id: string; title: string }, cwd?: string) {
-    // If multiple scan paths and no cwd specified, show picker
-    if (!cwd && this.state.scanPaths.length > 1) {
+    // If called with explicit name (from session restore or kanban), skip profile picker
+    if (name || taskContext) {
+      if (!cwd && this.state.scanPaths.length > 1) {
+        this.showCwdPicker((selectedCwd) => {
+          this.spawnAgentWithCwd(name, taskContext, selectedCwd);
+        });
+        return;
+      }
+      this.spawnAgentWithCwd(name, taskContext, cwd);
+      return;
+    }
+
+    // Show profile picker for new manual agents
+    this.showProfilePicker();
+  }
+
+  private showProfilePicker() {
+    document.querySelector('.cwd-picker-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'cwd-picker-overlay';
+
+    const picker = document.createElement('div');
+    picker.className = 'cwd-picker profile-picker';
+
+    const title = document.createElement('div');
+    title.className = 'cwd-picker-title';
+    title.textContent = 'New Agent — Select Profile';
+    picker.appendChild(title);
+
+    const profiles = this.state.agentProfiles;
+    for (const profile of profiles) {
+      const btn = document.createElement('button');
+      btn.className = 'cwd-picker-option';
+      btn.innerHTML = `
+        <span class="cwd-option-icon">${profile.icon}</span>
+        <span class="cwd-option-info">
+          <span class="cwd-option-name">${profile.name}</span>
+          <span class="cwd-option-path">${profile.description}</span>
+        </span>
+      `;
+      btn.addEventListener('click', () => {
+        overlay.remove();
+        this.spawnFromProfile(profile);
+      });
+      picker.appendChild(btn);
+    }
+
+    // Custom option — opens CWD picker
+    const customBtn = document.createElement('button');
+    customBtn.className = 'cwd-picker-option custom-profile';
+    customBtn.innerHTML = `
+      <span class="cwd-option-icon">⚙️</span>
+      <span class="cwd-option-info">
+        <span class="cwd-option-name">Custom</span>
+        <span class="cwd-option-path">Choose directory manually</span>
+      </span>
+    `;
+    customBtn.addEventListener('click', () => {
+      overlay.remove();
+      if (this.state.scanPaths.length > 1) {
+        this.showCwdPicker((selectedCwd) => this.spawnAgentWithCwd(undefined, undefined, selectedCwd));
+      } else {
+        this.spawnAgentWithCwd();
+      }
+    });
+    picker.appendChild(customBtn);
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    const escHandler = (e: KeyboardEvent) => { if (e.key === 'Escape') overlay.remove(); };
+    document.addEventListener('keydown', escHandler, { once: true });
+
+    overlay.appendChild(picker);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => {
+      const first = picker.querySelector('.cwd-picker-option') as HTMLElement;
+      if (first) first.focus();
+    });
+  }
+
+  private spawnFromProfile(profile: { name: string; cwd: string; command: string }) {
+    const cwd = profile.cwd || this.state.scanPaths[0];
+
+    // If multiple scan paths and profile has no fixed CWD, let user choose
+    if (!profile.cwd && this.state.scanPaths.length > 1) {
       this.showCwdPicker((selectedCwd) => {
-        this.spawnAgentWithCwd(name, taskContext, selectedCwd);
+        this.spawnAgentWithCwd(profile.name, undefined, selectedCwd);
+        if (profile.command) {
+          setTimeout(() => {
+            const agents = this.state.agents;
+            const lastAgent = agents[agents.length - 1];
+            if (lastAgent) this.terminalManager.writeRaw(lastAgent.id, profile.command + '\n');
+          }, 800);
+        }
       });
       return;
     }
-    this.spawnAgentWithCwd(name, taskContext, cwd);
+
+    this.spawnAgentWithCwd(profile.name, undefined, cwd);
+    if (profile.command) {
+      setTimeout(() => {
+        const agents = this.state.agents;
+        const lastAgent = agents[agents.length - 1];
+        if (lastAgent) this.terminalManager.writeRaw(lastAgent.id, profile.command + '\n');
+      }, 800);
+    }
   }
 
   private spawnAgentWithCwd(name?: string, taskContext?: { id: string; title: string }, cwd?: string) {
@@ -399,6 +504,24 @@ Examples:
     this.refreshAgentTabs();
     this.scheduleStateSave();
     setTimeout(() => this.terminalManager.fitAll(), 100);
+  }
+
+  private restoreSession() {
+    const savedAgents = [...this.state.agents];
+    if (savedAgents.length === 0) return;
+
+    // Clear the agents array — spawnAgentWithCwd will re-add them
+    this.state.agents = [];
+
+    // Set saved layout
+    this.setLayout(this.state.layout);
+
+    // Stagger spawns to avoid PTY overload
+    savedAgents.forEach((saved, i) => {
+      setTimeout(() => {
+        this.spawnAgentWithCwd(saved.name, undefined, saved.cwd);
+      }, i * 300);
+    });
   }
 
   private showCwdPicker(onSelect: (cwd: string) => void) {
@@ -829,10 +952,47 @@ Examples:
           <div class="detail-row"><span class="detail-label">Args</span><code>${this.escapeHtml((item.args || []).join(' ') || 'none')}</code></div>
           <div class="detail-row"><span class="detail-label">Config</span><code>${this.escapeHtml(item.configPath || 'unknown')}</code></div>
           <div class="detail-row"><span class="detail-label">Source</span><span class="detail-badge ${item.source}">${item.source}</span></div>
+          ${item.command ? '<div class="detail-row mcp-controls"><button class="mcp-start-btn" title="Start server">▶ Start</button><button class="mcp-stop-btn hidden" title="Stop server">⏹ Stop</button></div>' : ''}
         `;
         el.appendChild(detail);
 
-        el.addEventListener('click', () => {
+        // Wire start/stop buttons
+        if (item.command) {
+          const startBtn = detail.querySelector('.mcp-start-btn') as HTMLElement;
+          const stopBtn = detail.querySelector('.mcp-stop-btn') as HTMLElement;
+
+          startBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const bridge = (window as any).kaizenBridge;
+            const result = await bridge.startMCP(item.name, item.command, item.args);
+            if (result.ok) {
+              startBtn.classList.add('hidden');
+              stopBtn.classList.remove('hidden');
+              badge.textContent = 'running';
+              badge.className = 'tool-item-badge online';
+              this.showToast('success', `▶ ${item.name} started`);
+            } else {
+              this.showToast('error', `Failed: ${result.error}`);
+            }
+          });
+
+          stopBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const bridge = (window as any).kaizenBridge;
+            const result = await bridge.stopMCP(item.name);
+            if (result.ok) {
+              stopBtn.classList.add('hidden');
+              startBtn.classList.remove('hidden');
+              badge.textContent = 'installed';
+              badge.className = 'tool-item-badge installed';
+              this.showToast('info', `⏹ ${item.name} stopped`);
+            }
+          });
+        }
+
+        el.addEventListener('click', (ev) => {
+          // Don't toggle if clicking start/stop buttons
+          if ((ev.target as HTMLElement).closest('.mcp-controls')) return;
           detail.classList.toggle('hidden');
           el.classList.toggle('expanded');
           this.state.toolUsage[item.name] = (this.state.toolUsage[item.name] || 0) + 1;
@@ -1479,6 +1639,68 @@ ${codebaseStats?.symbols ? `\nProject has ${codebaseStats.files} indexed files a
       });
       resultsEl.appendChild(el);
     }
+  }
+
+  // ─── Env Var Manager ──────────────────────────────────────────────
+
+  private showEnvVarModal() {
+    const activeId = this.terminalManager.getActiveId();
+    if (!activeId) { this.showToast('warning', 'No active agent'); return; }
+
+    document.querySelector('.env-modal-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'env-modal-overlay';
+
+    const modal = document.createElement('div');
+    modal.className = 'env-modal';
+
+    const title = document.createElement('div');
+    title.className = 'env-modal-title';
+    title.textContent = 'Environment Variables';
+    modal.appendChild(title);
+
+    const rowsContainer = document.createElement('div');
+    modal.appendChild(rowsContainer);
+
+    const addRow = () => {
+      const row = document.createElement('div');
+      row.className = 'env-row';
+      row.innerHTML = `<input type="text" placeholder="KEY" class="env-key"><input type="text" placeholder="VALUE" class="env-val"><button class="env-row-remove">✕</button>`;
+      row.querySelector('.env-row-remove')!.addEventListener('click', () => row.remove());
+      rowsContainer.appendChild(row);
+      (row.querySelector('.env-key') as HTMLElement).focus();
+    };
+
+    // Start with one empty row
+    addRow();
+
+    const actions = document.createElement('div');
+    actions.className = 'env-modal-actions';
+    actions.innerHTML = `<button class="env-add-btn">+ Add</button><button class="env-save-btn">Apply</button>`;
+
+    actions.querySelector('.env-add-btn')!.addEventListener('click', addRow);
+    actions.querySelector('.env-save-btn')!.addEventListener('click', () => {
+      const rows = rowsContainer.querySelectorAll('.env-row');
+      let count = 0;
+      rows.forEach(row => {
+        const key = (row.querySelector('.env-key') as HTMLInputElement).value.trim();
+        const val = (row.querySelector('.env-val') as HTMLInputElement).value.trim();
+        if (key) {
+          this.terminalManager.writeRaw(activeId, `export ${key}=${val}\n`);
+          count++;
+        }
+      });
+      overlay.remove();
+      if (count > 0) this.showToast('success', `Set ${count} env var${count !== 1 ? 's' : ''}`);
+    });
+
+    modal.appendChild(actions);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') overlay.remove(); }, { once: true });
   }
 
   // ─── Fix 6: Broadcast Modal ───────────────────────────────────────

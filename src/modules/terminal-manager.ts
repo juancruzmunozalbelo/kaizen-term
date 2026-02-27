@@ -37,6 +37,9 @@ declare global {
             onAppError: (cb: (message: string) => void) => void;
             // Git
             gitBranch: (cwd?: string) => Promise<{ branch: string | null }>;
+            // Dialogs
+            openFolderDialog: () => Promise<string | null>;
+            saveFileDialog: (defaultName: string, content: string) => Promise<string | null>;
         };
     }
 }
@@ -312,6 +315,7 @@ export class TerminalManager {
         <span class="panel-lastline" title="Last terminal output"></span>
         <div class="panel-actions">
           <button class="panel-action-btn copy-output" title="Copy last output">📋</button>
+          <button class="panel-action-btn export" title="Export terminal output">📤</button>
           <button class="panel-action-btn watch" title="Watch Mode: notify on errors">👁</button>
           <button class="panel-action-btn maximize" title="Maximize">⤢</button>
           <button class="panel-action-btn close" title="Close">✕</button>
@@ -511,6 +515,13 @@ export class TerminalManager {
             this.copyLastOutput(agent.id);
         });
 
+        // Export button
+        const exportBtn = panel.querySelector('.panel-action-btn.export') as HTMLElement;
+        exportBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.exportTerminal(agent.id);
+        });
+
         // Drag & Drop files → paste path into terminal
         body.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -680,6 +691,97 @@ export class TerminalManager {
                 btn.style.color = '';
             }, 1200);
         }
+    }
+
+    private async exportTerminal(id: string) {
+        const inst = this.terminals.get(id);
+        if (!inst) return;
+
+        const buf = inst.terminal.buffer.active;
+        const lines: string[] = [];
+        for (let i = 0; i < buf.length; i++) {
+            const line = buf.getLine(i);
+            if (line) lines.push(line.translateToString(true));
+        }
+
+        const content = `# Terminal Export — ${inst.agent.name}\n\n> CWD: \`${inst.agent.cwd}\`\n> Exported: ${new Date().toISOString()}\n\n\`\`\`\n${lines.join('\n')}\n\`\`\`\n`;
+
+        const result = await this.bridge.saveFileDialog(
+            `${inst.agent.name.toLowerCase().replace(/\s+/g, '-')}-export.md`,
+            content
+        );
+        if (result) {
+            const btn = inst.element.querySelector('.panel-action-btn.export') as HTMLElement;
+            if (btn) {
+                btn.textContent = '✓';
+                btn.style.color = '#06d6a0';
+                setTimeout(() => { btn.textContent = '📤'; btn.style.color = ''; }, 1200);
+            }
+        }
+    }
+
+    getCommandHistory(id: string): string[] {
+        const inst = this.terminals.get(id);
+        if (!inst) return [];
+        // Extract unique commands from tracked blocks, most recent first
+        const cmds: string[] = [];
+        const seen = new Set<string>();
+        for (let i = inst.blocks.length - 1; i >= 0; i--) {
+            const cmd = inst.blocks[i].command?.trim();
+            if (cmd && !seen.has(cmd)) {
+                seen.add(cmd);
+                cmds.push(cmd);
+            }
+            if (cmds.length >= 20) break;
+        }
+        return cmds;
+    }
+
+    showCommandHistory(id: string) {
+        const inst = this.terminals.get(id);
+        if (!inst) return;
+
+        // Remove existing
+        document.querySelector('.cmd-history-popup')?.remove();
+
+        const cmds = this.getCommandHistory(id);
+        if (cmds.length === 0) return;
+
+        const popup = document.createElement('div');
+        popup.className = 'cmd-history-popup';
+
+        const title = document.createElement('div');
+        title.className = 'cmd-history-title';
+        title.textContent = 'Recent Commands';
+        popup.appendChild(title);
+
+        for (const cmd of cmds) {
+            const item = document.createElement('div');
+            item.className = 'cmd-history-item';
+            item.textContent = cmd;
+            item.addEventListener('click', () => {
+                this.writeRaw(id, cmd + '\n');
+                popup.remove();
+            });
+            popup.appendChild(item);
+        }
+
+        // Position near the panel
+        const rect = inst.element.getBoundingClientRect();
+        popup.style.left = `${rect.left + 10}px`;
+        popup.style.top = `${rect.top + 40}px`;
+        popup.style.maxHeight = `${rect.height - 60}px`;
+
+        document.body.appendChild(popup);
+
+        // Close on outside click or Escape
+        const closeHandler = (e: MouseEvent) => {
+            if (!popup.contains(e.target as Node)) { popup.remove(); document.removeEventListener('click', closeHandler); }
+        };
+        setTimeout(() => document.addEventListener('click', closeHandler), 50);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') popup.remove();
+        }, { once: true });
     }
 
     fitAll() {

@@ -532,6 +532,46 @@ ipcMain.handle('discover:mcp', (event, paths) => {
     return discoverMCPResources(paths || []);
 });
 
+// ─── MCP Server Process Management ──────────────────────────────────────────
+
+const mcpProcesses = new Map();
+
+ipcMain.handle('mcp:start', (event, { name, command, args }) => {
+    if (mcpProcesses.has(name)) return { ok: false, error: 'Already running' };
+    try {
+        const child = require('child_process').spawn(command, args || [], {
+            cwd: HOME,
+            env: { ...process.env, TERM: 'xterm-256color' },
+            stdio: ['ignore', 'pipe', 'pipe'],
+            detached: false,
+        });
+        mcpProcesses.set(name, child);
+        child.on('exit', () => mcpProcesses.delete(name));
+        child.on('error', () => mcpProcesses.delete(name));
+        appendSessionLog(`MCP START ${name}: ${command} ${(args || []).join(' ')}`);
+        return { ok: true, pid: child.pid };
+    } catch (err) {
+        return { ok: false, error: err.message };
+    }
+});
+
+ipcMain.handle('mcp:stop', (event, { name }) => {
+    const child = mcpProcesses.get(name);
+    if (!child) return { ok: false, error: 'Not running' };
+    try {
+        child.kill('SIGTERM');
+        mcpProcesses.delete(name);
+        appendSessionLog(`MCP STOP ${name}`);
+        return { ok: true };
+    } catch (err) {
+        return { ok: false, error: err.message };
+    }
+});
+
+ipcMain.handle('mcp:status', () => {
+    return Array.from(mcpProcesses.keys());
+});
+
 ipcMain.handle('dialog:openFolder', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
         properties: ['openDirectory'],
@@ -539,6 +579,20 @@ ipcMain.handle('dialog:openFolder', async () => {
     });
     if (result.canceled || result.filePaths.length === 0) return null;
     return result.filePaths[0];
+});
+
+ipcMain.handle('dialog:saveFile', async (event, { defaultName, content }) => {
+    const result = await dialog.showSaveDialog(mainWindow, {
+        defaultPath: defaultName,
+        filters: [
+            { name: 'Markdown', extensions: ['md'] },
+            { name: 'Text', extensions: ['txt'] },
+            { name: 'All Files', extensions: ['*'] },
+        ],
+    });
+    if (result.canceled || !result.filePath) return null;
+    fs.writeFileSync(result.filePath, content, 'utf-8');
+    return result.filePath;
 });
 
 // ─── IPC: Filesystem (Secured) ──────────────────────────────────────────────

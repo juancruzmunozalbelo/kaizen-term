@@ -22,6 +22,14 @@ export interface KanbanTask {
     createdAt: number;
 }
 
+export interface AgentProfile {
+    name: string;
+    icon: string;
+    cwd: string;
+    command: string;
+    description: string;
+}
+
 export interface AppState {
     layout: 1 | 2 | 3 | 4 | 6;
     agents: AgentConfig[];
@@ -46,6 +54,9 @@ export interface AppState {
     aiBaseUrl: string;
     aiApiKey: string;
     onboarded: boolean;
+    // Agent profiles & command history
+    agentProfiles: AgentProfile[];
+    commandHistory: Record<string, string[]>;
 }
 
 const STORAGE_KEY = 'kaizen-term-state';
@@ -87,6 +98,12 @@ export function createDefaultState(): AppState {
         aiBaseUrl: 'http://localhost:11434',
         aiApiKey: '',
         onboarded: false,
+        agentProfiles: [
+            { name: 'Coder', icon: '💻', cwd: '', command: 'npm test --watch', description: 'Run tests in watch mode' },
+            { name: 'Monitor', icon: '📊', cwd: '', command: 'tail -f ~/.kaizen-term/session.log', description: 'Monitor session logs' },
+            { name: 'Shell', icon: '🐚', cwd: '', command: '', description: 'Blank shell, no startup command' },
+        ],
+        commandHistory: {},
     };
 }
 

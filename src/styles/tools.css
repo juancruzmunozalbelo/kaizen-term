@@ -564,6 +564,213 @@
     border-radius: 2px;
 }
 
+/* Command History Popup */
+.cmd-history-popup {
+    position: fixed;
+    z-index: 9999;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px;
+    min-width: 280px;
+    max-width: 420px;
+    overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    animation: picker-in 0.15s ease;
+}
+
+.cmd-history-title {
+    font-family: var(--font-ui);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    padding: 6px 8px 4px;
+}
+
+.cmd-history-item {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 6px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cmd-history-item:hover {
+    background: rgba(0, 229, 255, 0.06);
+    color: var(--text-primary);
+}
+
+/* Profile Picker */
+.custom-profile {
+    border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+    margin-top: 4px !important;
+    opacity: 0.7;
+}
+
+.custom-profile:hover {
+    opacity: 1;
+}
+
+/* MCP Start/Stop Controls */
+.mcp-controls {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.mcp-start-btn,
+.mcp-stop-btn {
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid;
+}
+
+.mcp-start-btn {
+    background: rgba(6, 214, 160, 0.1);
+    color: var(--agent-green);
+    border-color: rgba(6, 214, 160, 0.2);
+}
+
+.mcp-start-btn:hover {
+    background: rgba(6, 214, 160, 0.2);
+}
+
+.mcp-stop-btn {
+    background: rgba(255, 0, 110, 0.1);
+    color: var(--agent-magenta);
+    border-color: rgba(255, 0, 110, 0.2);
+}
+
+.mcp-stop-btn:hover {
+    background: rgba(255, 0, 110, 0.2);
+}
+
+.mcp-start-btn.hidden,
+.mcp-stop-btn.hidden {
+    display: none;
+}
+
+/* Env Var Modal */
+.env-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.15s ease;
+}
+
+.env-modal {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    min-width: 400px;
+    max-height: 70vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: picker-in 0.2s ease;
+}
+
+.env-modal-title {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.env-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.env-row input {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 5px;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.env-row input:focus {
+    border-color: rgba(0, 229, 255, 0.3);
+}
+
+.env-row input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.4;
+}
+
+.env-row-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0.4;
+    font-size: 12px;
+}
+
+.env-row-remove:hover {
+    opacity: 1;
+    color: var(--agent-magenta);
+}
+
+.env-modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    justify-content: flex-end;
+}
+
+.env-modal-actions button {
+    font-family: var(--font-ui);
+    font-size: 12px;
+    padding: 6px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid;
+    transition: all 0.15s ease;
+}
+
+.env-add-btn {
+    background: none;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: var(--text-muted);
+}
+
+.env-save-btn {
+    background: rgba(0, 229, 255, 0.1);
+    border-color: rgba(0, 229, 255, 0.2) !important;
+    color: var(--agent-cyan);
+}
+
+.env-save-btn:hover {
+    background: rgba(0, 229, 255, 0.2);
+}
+
 /* Workspace flex layout */
 #workspace {
     display: flex;

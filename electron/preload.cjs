@@ -47,4 +47,10 @@ contextBridge.exposeInMainWorld('kaizenBridge', {
 
     // Dialog
     openFolderDialog: () => ipcRenderer.invoke('dialog:openFolder'),
+    saveFileDialog: (defaultName, content) => ipcRenderer.invoke('dialog:saveFile', { defaultName, content }),
+
+    // MCP Process Management
+    startMCP: (name, command, args) => ipcRenderer.invoke('mcp:start', { name, command, args }),
+    stopMCP: (name) => ipcRenderer.invoke('mcp:stop', { name }),
+    getMCPStatus: () => ipcRenderer.invoke('mcp:status'),
 });
