@@ -128,17 +128,20 @@ export class TerminalManager {
         });
     }
 
+    private stripANSI(data: string): string {
+        return data
+            .replace(TerminalManager.ANSI_STRIP_RE, '')
+            .replace(TerminalManager.ANSI_RESIDUAL_RE, '')
+            .replace(/\r/g, '');
+    }
+
     private updatePanelActivity(id: string, rawData: string) {
         const inst = this.terminals.get(id);
         if (!inst) return;
         const isActive = id === this.activeId;
 
         // Strip ANSI for clean last-line text
-        const clean = rawData
-            .replace(TerminalManager.ANSI_STRIP_RE, '')
-            .replace(TerminalManager.ANSI_RESIDUAL_RE, '')
-            .replace(/\r/g, '')
-            .trim();
+        const clean = this.stripANSI(rawData).trim();
         const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
         const lastLine = lines[lines.length - 1];
 
@@ -954,9 +957,7 @@ export class TerminalManager {
 
     private trackBlocks(inst: TerminalInstance, data: string) {
         // Build up line buffer
-        const clean = data
-            .replace(TerminalManager.ANSI_STRIP_RE, '')
-            .replace(/\r/g, '');
+        const clean = this.stripANSI(data);
 
         inst.lineBuffer += clean;
 
