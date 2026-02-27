@@ -359,8 +359,19 @@ Examples:
 
   // ─── Agent Management ──────────────────────────────────────────────
 
-  addAgent(name?: string, taskContext?: { id: string; title: string }) {
-    const agent = createAgent(this.state, name);
+  addAgent(name?: string, taskContext?: { id: string; title: string }, cwd?: string) {
+    // If multiple scan paths and no cwd specified, show picker
+    if (!cwd && this.state.scanPaths.length > 1) {
+      this.showCwdPicker((selectedCwd) => {
+        this.spawnAgentWithCwd(name, taskContext, selectedCwd);
+      });
+      return;
+    }
+    this.spawnAgentWithCwd(name, taskContext, cwd);
+  }
+
+  private spawnAgentWithCwd(name?: string, taskContext?: { id: string; title: string }, cwd?: string) {
+    const agent = createAgent(this.state, name, cwd);
     if (taskContext) {
       (agent as any).taskId = taskContext.id;
       (agent as any).taskTitle = taskContext.title;
@@ -386,6 +397,70 @@ Examples:
     this.refreshAgentTabs();
     this.scheduleStateSave();
     setTimeout(() => this.terminalManager.fitAll(), 100);
+  }
+
+  private showCwdPicker(onSelect: (cwd: string) => void) {
+    // Remove any existing picker
+    document.querySelector('.cwd-picker-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'cwd-picker-overlay';
+
+    const picker = document.createElement('div');
+    picker.className = 'cwd-picker';
+
+    const title = document.createElement('div');
+    title.className = 'cwd-picker-title';
+    title.textContent = 'Select Working Directory';
+    picker.appendChild(title);
+
+    for (const p of this.state.scanPaths) {
+      const btn = document.createElement('button');
+      btn.className = 'cwd-picker-option';
+
+      const segments = p.split('/').filter(Boolean);
+      const dirName = segments[segments.length - 1] || p;
+      const parentPath = segments.length > 1 ? segments.slice(0, -1).join('/') : '';
+
+      btn.innerHTML = `
+        <span class="cwd-option-icon">📂</span>
+        <span class="cwd-option-info">
+          <span class="cwd-option-name">${dirName}</span>
+          <span class="cwd-option-path">${parentPath}</span>
+        </span>
+      `;
+      btn.addEventListener('click', () => {
+        overlay.remove();
+        onSelect(p);
+      });
+      picker.appendChild(btn);
+    }
+
+    // Close on overlay click or Escape
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+        // Fall through with default
+        onSelect(this.state.scanPaths[0]);
+      }
+    });
+    const escHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        overlay.remove();
+        document.removeEventListener('keydown', escHandler);
+        onSelect(this.state.scanPaths[0]);
+      }
+    };
+    document.addEventListener('keydown', escHandler, { once: true });
+
+    overlay.appendChild(picker);
+    document.body.appendChild(overlay);
+
+    // Focus first option
+    requestAnimationFrame(() => {
+      const first = picker.querySelector('.cwd-picker-option') as HTMLElement;
+      if (first) first.focus();
+    });
   }
 
   // Fix 3: Spawn agent pre-wired to a specific Kanban task

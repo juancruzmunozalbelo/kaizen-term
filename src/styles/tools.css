@@ -359,6 +359,119 @@
     border-color: rgba(0, 229, 255, 0.15);
 }
 
+/* CWD Picker Popup */
+.cwd-picker-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.cwd-picker {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg, 12px);
+    padding: 20px;
+    min-width: 320px;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: picker-in 0.2s ease;
+}
+
+@keyframes picker-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.cwd-picker-title {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cwd-picker-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    margin: 4px 0;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+    color: var(--text-primary);
+}
+
+.cwd-picker-option:hover {
+    background: rgba(0, 229, 255, 0.06);
+    border-color: rgba(0, 229, 255, 0.2);
+    transform: translateX(2px);
+}
+
+.cwd-picker-option:focus {
+    outline: none;
+    background: rgba(0, 229, 255, 0.08);
+    border-color: rgba(0, 229, 255, 0.3);
+    box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.1);
+}
+
+.cwd-option-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.cwd-option-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.cwd-option-name {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.cwd-option-path {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    opacity: 0.6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* Workspace flex layout */
 #workspace {
     display: flex;

@@ -126,14 +126,14 @@ export function generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function createAgent(state: AppState, name?: string): AgentConfig {
+export function createAgent(state: AppState, name?: string, cwd?: string): AgentConfig {
     const index = state.agents.length;
     const agent: AgentConfig = {
         id: generateId(),
         name: name || `Agent ${index + 1}`,
         color: getAgentColor(index),
         status: 'idle',
-        cwd: state.scanPaths[0] || '/Users/juancruz/Documents',
+        cwd: cwd || state.scanPaths[0] || '/Users/juancruz/Documents',
     };
     return agent;
 }
