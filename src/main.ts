@@ -106,6 +106,8 @@ class KaizenApp {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A') { e.preventDefault(); this.toggleOmniDrawer(); }
       // Phase 6: Terminal search
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') { e.preventDefault(); this.terminalManager.toggleSearch(); }
+      // Global search across all terminals
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') { e.preventDefault(); this.showGlobalSearch(); }
       // Fix 8: Escape key priority — omni > drawer > palette > zen, with early return
       if (e.key === 'Escape') {
         const omni = document.getElementById('omni-agent-drawer');
@@ -1376,6 +1378,107 @@ ${codebaseStats?.symbols ? `\nProject has ${codebaseStats.files} indexed files a
         keywords: ['task', 'active', 'doing'],
       });
     });
+  }
+
+  // ─── Global Terminal Search (⌘⇧F) ──────────────────────────────────
+
+  private showGlobalSearch() {
+    // Remove existing
+    document.querySelector('.global-search-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'global-search-overlay';
+
+    const container = document.createElement('div');
+    container.className = 'global-search';
+
+    const input = document.createElement('input');
+    input.className = 'global-search-input';
+    input.placeholder = 'Search across all terminals…';
+    input.spellcheck = false;
+
+    const results = document.createElement('div');
+    results.className = 'global-search-results';
+    results.innerHTML = '<div class="tools-empty">Type to search</div>';
+
+    container.appendChild(input);
+    container.appendChild(results);
+    overlay.appendChild(container);
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(() => input.focus());
+
+    let debounce: ReturnType<typeof setTimeout>;
+    input.addEventListener('input', () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => this.runGlobalSearch(input.value, results), 200);
+    });
+
+    // Close handlers
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') overlay.remove();
+    });
+  }
+
+  private runGlobalSearch(query: string, resultsEl: HTMLElement) {
+    resultsEl.innerHTML = '';
+    if (!query || query.length < 2) {
+      resultsEl.innerHTML = '<div class="tools-empty">Type at least 2 characters</div>';
+      return;
+    }
+
+    const terminals = this.terminalManager.getAllTerminals();
+    const matches: { agentName: string; agentId: string; line: string; lineNum: number }[] = [];
+    const q = query.toLowerCase();
+
+    for (const inst of terminals) {
+      const buf = inst.terminal.buffer.active;
+      for (let i = 0; i < buf.length; i++) {
+        const row = buf.getLine(i);
+        if (!row) continue;
+        const text = row.translateToString(true).trim();
+        if (text && text.toLowerCase().includes(q)) {
+          matches.push({
+            agentName: inst.agent.name,
+            agentId: inst.agent.id,
+            line: text,
+            lineNum: i,
+          });
+          if (matches.length >= 50) break;
+        }
+      }
+      if (matches.length >= 50) break;
+    }
+
+    if (matches.length === 0) {
+      resultsEl.innerHTML = '<div class="tools-empty">No matches found</div>';
+      return;
+    }
+
+    for (const m of matches) {
+      const el = document.createElement('div');
+      el.className = 'global-search-result';
+
+      // Highlight matching text
+      const idx = m.line.toLowerCase().indexOf(q);
+      const before = m.line.slice(0, idx);
+      const match = m.line.slice(idx, idx + query.length);
+      const after = m.line.slice(idx + query.length);
+
+      el.innerHTML = `
+        <span class="gsr-agent">${m.agentName}</span>
+        <span class="gsr-line">${this.escapeHtml(before)}<mark>${this.escapeHtml(match)}</mark>${this.escapeHtml(after)}</span>
+      `;
+
+      el.addEventListener('click', () => {
+        // Navigate to the terminal and highlight
+        this.terminalManager.setActive(m.agentId);
+        this.terminalManager.searchInTerminal(m.agentId, query);
+        document.querySelector('.global-search-overlay')?.remove();
+      });
+      resultsEl.appendChild(el);
+    }
   }
 
   // ─── Fix 6: Broadcast Modal ───────────────────────────────────────

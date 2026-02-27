@@ -472,6 +472,98 @@
     white-space: nowrap;
 }
 
+/* Global Search Overlay */
+.global-search-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 15vh;
+    animation: fadeIn 0.15s ease;
+}
+
+.global-search {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    width: 520px;
+    max-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: picker-in 0.2s ease;
+    overflow: hidden;
+}
+
+.global-search-input {
+    width: 100%;
+    padding: 14px 18px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    outline: none;
+}
+
+.global-search-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.global-search-results {
+    overflow-y: auto;
+    max-height: calc(60vh - 50px);
+    padding: 8px;
+}
+
+.global-search-result {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.global-search-result:hover {
+    background: var(--bg-elevated);
+}
+
+.gsr-agent {
+    font-family: var(--font-ui);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--agent-cyan);
+    background: rgba(0, 229, 255, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.gsr-line {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gsr-line mark {
+    background: rgba(255, 190, 11, 0.25);
+    color: var(--agent-yellow);
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
 /* Workspace flex layout */
 #workspace {
     display: flex;

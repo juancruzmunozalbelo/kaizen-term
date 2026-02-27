@@ -311,6 +311,7 @@ export class TerminalManager {
         <span class="panel-status status-cycle status-idle" data-term-id="${agent.id}">idle</span>
         <span class="panel-lastline" title="Last terminal output"></span>
         <div class="panel-actions">
+          <button class="panel-action-btn copy-output" title="Copy last output">📋</button>
           <button class="panel-action-btn watch" title="Watch Mode: notify on errors">👁</button>
           <button class="panel-action-btn maximize" title="Maximize">⤢</button>
           <button class="panel-action-btn close" title="Close">✕</button>
@@ -503,6 +504,49 @@ export class TerminalManager {
             }
         });
 
+        // Copy Last Output button
+        const copyBtn = panel.querySelector('.panel-action-btn.copy-output') as HTMLElement;
+        copyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.copyLastOutput(agent.id);
+        });
+
+        // Drag & Drop files → paste path into terminal
+        body.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            body.classList.add('drag-over');
+        });
+        body.addEventListener('dragleave', () => {
+            body.classList.remove('drag-over');
+        });
+        body.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            body.classList.remove('drag-over');
+            const files = e.dataTransfer?.files;
+            if (files && files.length > 0) {
+                // Insert all file paths space-separated
+                const paths = Array.from(files).map(f => (f as any).path || f.name).join(' ');
+                this.writeToTerminal(agent.id, paths);
+            }
+        });
+
+        // Auto CWD title update via OSC title sequences
+        terminal.onTitleChange((title: string) => {
+            if (title) {
+                const nameEl = panel.querySelector('.panel-name') as HTMLElement;
+                if (nameEl) {
+                    // Show just the last directory segment
+                    const segments = title.split('/').filter(Boolean);
+                    const short = segments.length > 0 ? segments[segments.length - 1] : title;
+                    nameEl.textContent = short;
+                    nameEl.title = title;
+                    agent.name = short;
+                }
+            }
+        });
+
         this.setActive(agent.id);
         this.updateGridSideCount();
         return inst;
@@ -591,9 +635,50 @@ export class TerminalManager {
     private updateGridSideCount() {
         const grid = document.querySelector('.terminal-grid') as HTMLElement | null;
         if (grid) {
-            // Number of side panels is total minus the 1 active panel. Minimum 1 to avoid span 0.
             const sideCount = Math.max(1, this.terminals.size - 1);
             grid.style.setProperty('--side-count', sideCount.toString());
+        }
+    }
+
+    private copyLastOutput(id: string) {
+        const inst = this.terminals.get(id);
+        if (!inst) return;
+
+        // Try to get the last block's output first
+        if (inst.blocks.length > 0) {
+            const lastBlock = inst.blocks[inst.blocks.length - 1];
+            const text = [lastBlock.command, ...lastBlock.output].filter(Boolean).join('\n');
+            if (text) {
+                navigator.clipboard.writeText(text);
+                this.flashCopyFeedback(inst.element);
+                return;
+            }
+        }
+
+        // Fallback: grab last 50 lines from xterm buffer
+        const buf = inst.terminal.buffer.active;
+        const lines: string[] = [];
+        const start = Math.max(0, buf.cursorY - 50);
+        for (let i = start; i <= buf.cursorY; i++) {
+            const line = buf.getLine(i);
+            if (line) lines.push(line.translateToString(true));
+        }
+        const text = lines.join('\n').trim();
+        if (text) {
+            navigator.clipboard.writeText(text);
+            this.flashCopyFeedback(inst.element);
+        }
+    }
+
+    private flashCopyFeedback(panel: HTMLElement) {
+        const btn = panel.querySelector('.panel-action-btn.copy-output') as HTMLElement;
+        if (btn) {
+            btn.textContent = '✓';
+            btn.style.color = '#06d6a0';
+            setTimeout(() => {
+                btn.textContent = '📋';
+                btn.style.color = '';
+            }, 1200);
         }
     }
 
@@ -947,6 +1032,13 @@ export class TerminalManager {
 
     getAllTerminals(): TerminalInstance[] {
         return Array.from(this.terminals.values());
+    }
+
+    searchInTerminal(id: string, query: string) {
+        const inst = this.terminals.get(id);
+        if (!inst) return;
+        inst.searchAddon.findNext(query, { regex: false, caseSensitive: false });
+        inst.terminal.focus();
     }
 
     async discoverSkills(paths: string[]): Promise<any> {
