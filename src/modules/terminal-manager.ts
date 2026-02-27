@@ -342,10 +342,6 @@ export class TerminalManager {
             // Image addon requires WebGL — skip if unavailable
         }
 
-        requestAnimationFrame(() => {
-            try { fitAddon.fit(); } catch { }
-        });
-
         const inst: TerminalInstance = {
             id: agent.id,
             agent,
@@ -365,27 +361,31 @@ export class TerminalManager {
 
         this.terminals.set(agent.id, inst);
 
-        // Spawn real shell via Electron IPC
-        const { cols, rows } = terminal;
-        this.bridge.spawnTerminal({
-            id: agent.id,
-            cols,
-            rows,
-            cwd: agent.cwd,
-            ...(taskContext ? { timerState: `task:${taskContext.id}` } : {}),
-        }).then((result) => {
-            // Remove loading indicator
-            inst.element.querySelector('.terminal-loading')?.remove();
-            if (result.error) {
-                terminal.write(`\r\n\x1b[31m Error: ${result.error}\x1b[0m\r\n`);
-                this.onStatusChange?.(agent.id, 'error');
-                // Fix #6: only show dead shell overlay on actual spawn failure
-                this.showDeadShellOverlay(inst, agent);
-            } else {
-                this.onStatusChange?.(agent.id, 'idle');
-                // Discoverability: show a subtle hint overlay for new users
-                this.showDiscoverabilityHint(inst);
-            }
+        // Spawn shell AFTER fit so PTY gets correct dimensions (avoids zsh prompt garble)
+        requestAnimationFrame(() => {
+            try { fitAddon.fit(); } catch { }
+
+            const { cols, rows } = terminal;
+            this.bridge.spawnTerminal({
+                id: agent.id,
+                cols,
+                rows,
+                cwd: agent.cwd,
+                ...(taskContext ? { timerState: `task:${taskContext.id}` } : {}),
+            }).then((result) => {
+                // Remove loading indicator
+                inst.element.querySelector('.terminal-loading')?.remove();
+                if (result.error) {
+                    terminal.write(`\r\n\x1b[31m Error: ${result.error}\x1b[0m\r\n`);
+                    this.onStatusChange?.(agent.id, 'error');
+                    // Fix #6: only show dead shell overlay on actual spawn failure
+                    this.showDeadShellOverlay(inst, agent);
+                } else {
+                    this.onStatusChange?.(agent.id, 'idle');
+                    // Discoverability: show a subtle hint overlay for new users
+                    this.showDiscoverabilityHint(inst);
+                }
+            });
         });
 
         // Fix #13: show loading indicator while shell is spawning
