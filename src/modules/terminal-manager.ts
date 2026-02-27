@@ -504,6 +504,7 @@ export class TerminalManager {
         });
 
         this.setActive(agent.id);
+        this.updateGridSideCount();
         return inst;
     }
 
@@ -583,6 +584,17 @@ export class TerminalManager {
 
         window.dispatchEvent(new CustomEvent('kaizen-agent-removed', { detail: { id } }));
         window.dispatchEvent(new CustomEvent('kaizen-state-change'));
+
+        this.updateGridSideCount();
+    }
+
+    private updateGridSideCount() {
+        const grid = document.querySelector('.terminal-grid') as HTMLElement | null;
+        if (grid) {
+            // Number of side panels is total minus the 1 active panel. Minimum 1 to avoid span 0.
+            const sideCount = Math.max(1, this.terminals.size - 1);
+            grid.style.setProperty('--side-count', sideCount.toString());
+        }
     }
 
     fitAll() {

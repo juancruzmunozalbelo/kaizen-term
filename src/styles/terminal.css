@@ -43,7 +43,7 @@
 
 .terminal-grid.layout-3 .terminal-panel.active {
     grid-column: 1;
-    grid-row: 1 / span 10;
+    grid-row: 1 / span var(--side-count, 1);
 }
 
 .terminal-grid.layout-4 {
