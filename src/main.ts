@@ -86,6 +86,7 @@ class KaizenApp {
     document.getElementById('tools-close')!.addEventListener('click', () => this.toggleTools());
     document.getElementById('mcp-refresh')!.addEventListener('click', () => this.runDiscovery());
     document.getElementById('skills-refresh')!.addEventListener('click', () => this.runDiscovery());
+    document.getElementById('add-scan-path')!.addEventListener('click', () => this.addScanPath());
 
     // ─── Register Commands ───────────────────────────────────────────
     this.registerCommands();
@@ -573,6 +574,9 @@ Examples:
   // ─── MCP / Skills ──────────────────────────────────────────────────
 
   private async runDiscovery() {
+    // Render current scan paths
+    this.renderScanPaths();
+
     // Discover Skills & Workflows
     try {
       const result = await this.terminalManager.discoverSkills(this.state.scanPaths);
@@ -627,6 +631,67 @@ Examples:
     } catch { }
   }
 
+  private renderScanPaths() {
+    const list = document.getElementById('scan-paths-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    if (this.state.scanPaths.length === 0) {
+      list.innerHTML = '<div class="tools-empty">No scan paths</div>';
+      return;
+    }
+
+    for (const p of this.state.scanPaths) {
+      const el = document.createElement('div');
+      el.className = 'scan-path-pill';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'scan-path-name';
+      // Show last 2 segments for readability
+      const segments = p.split('/').filter(Boolean);
+      nameSpan.textContent = segments.length > 2 ? `…/${segments.slice(-2).join('/')}` : p;
+      nameSpan.title = p;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'scan-path-remove';
+      removeBtn.textContent = '✕';
+      removeBtn.title = 'Remove scan path';
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.removeScanPath(p);
+      });
+
+      el.appendChild(nameSpan);
+      el.appendChild(removeBtn);
+      list.appendChild(el);
+    }
+  }
+
+  private async addScanPath() {
+    const bridge = (window as any).kaizenBridge;
+    const folder = await bridge.openFolderDialog();
+    if (!folder) return; // user cancelled
+
+    if (this.state.scanPaths.includes(folder)) {
+      this.showToast('info', '📂 Folder already added');
+      return;
+    }
+
+    this.state.scanPaths.push(folder);
+    this.scheduleStateSave();
+    this.renderScanPaths();
+    this.showToast('info', `📂 Added: ${folder.split('/').pop()}`);
+    this.runDiscovery();
+  }
+
+  private removeScanPath(pathToRemove: string) {
+    this.state.scanPaths = this.state.scanPaths.filter(p => p !== pathToRemove);
+    this.scheduleStateSave();
+    this.renderScanPaths();
+    this.showToast('info', `📂 Removed: ${pathToRemove.split('/').pop()}`);
+    this.runDiscovery();
+  }
+
   private populateSidebarList(listId: string, items: any[], type: 'mcp' | 'skill' | 'workflow') {
     const list = document.getElementById(listId);
     if (!list) return;
@@ -678,14 +743,39 @@ Examples:
       el.appendChild(infoDiv);
       el.appendChild(badge);
 
-      el.addEventListener('click', () => {
-        // Track usage
-        this.state.toolUsage[item.name] = (this.state.toolUsage[item.name] || 0) + 1;
-        this.scheduleStateSave();
-        this.showToast('info', `${icons[type]} ${item.name}`);
-      });
+      // MCP detail drawer on click
+      if (type === 'mcp') {
+        const detail = document.createElement('div');
+        detail.className = 'tool-item-detail hidden';
+        detail.innerHTML = `
+          <div class="detail-row"><span class="detail-label">Command</span><code>${this.escapeHtml(item.command || 'N/A')}</code></div>
+          <div class="detail-row"><span class="detail-label">Args</span><code>${this.escapeHtml((item.args || []).join(' ') || 'none')}</code></div>
+          <div class="detail-row"><span class="detail-label">Config</span><code>${this.escapeHtml(item.configPath || 'unknown')}</code></div>
+          <div class="detail-row"><span class="detail-label">Source</span><span class="detail-badge ${item.source}">${item.source}</span></div>
+        `;
+        el.appendChild(detail);
+
+        el.addEventListener('click', () => {
+          detail.classList.toggle('hidden');
+          el.classList.toggle('expanded');
+          this.state.toolUsage[item.name] = (this.state.toolUsage[item.name] || 0) + 1;
+          this.scheduleStateSave();
+        });
+      } else {
+        el.addEventListener('click', () => {
+          this.state.toolUsage[item.name] = (this.state.toolUsage[item.name] || 0) + 1;
+          this.scheduleStateSave();
+          this.showToast('info', `${icons[type]} ${item.name}`);
+        });
+      }
       list.appendChild(el);
     }
+  }
+
+  private escapeHtml(text: string): string {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
   }
 
   // ─── Commands ──────────────────────────────────────────────────────

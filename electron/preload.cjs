@@ -44,4 +44,7 @@ contextBridge.exposeInMainWorld('kaizenBridge', {
 
     // Git
     gitBranch: (cwd) => ipcRenderer.invoke('git:branch', cwd),
+
+    // Dialog
+    openFolderDialog: () => ipcRenderer.invoke('dialog:openFolder'),
 });

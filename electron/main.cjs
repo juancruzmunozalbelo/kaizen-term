@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const pty = require('node-pty');
 const fs = require('fs');
@@ -530,6 +530,15 @@ ipcMain.handle('discover:skills', (event, paths) => {
 
 ipcMain.handle('discover:mcp', (event, paths) => {
     return discoverMCPResources(paths || []);
+});
+
+ipcMain.handle('dialog:openFolder', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openDirectory'],
+        title: 'Select Scan Folder',
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
 });
 
 // ─── IPC: Filesystem (Secured) ──────────────────────────────────────────────
