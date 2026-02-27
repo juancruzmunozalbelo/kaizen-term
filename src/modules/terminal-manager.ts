@@ -526,15 +526,13 @@ export class TerminalManager {
                     requestAnimationFrame(() => this.attachWebGL(inst));
                 }
                 inst.terminal.focus();
-                // Re-fit to ensure proper rendering after becoming visible
-                requestAnimationFrame(() => {
-                    try { inst.fitAddon.fit(); } catch { }
-                });
                 // Clear error glow and activity indicators when panel is focused
                 inst.element.querySelector('.panel-header')?.classList.remove('has-errors', 'has-activity', 'is-blocked');
                 inst.element.querySelector('.panel-dot')?.classList.remove('error-pulse', 'blocked-pulse');
             }
         });
+        // Refit ALL visible panels — layout-3 rearranges the grid when active changes
+        this.fitAll();
     }
 
     setAgentStatus(id: string, status: AgentConfig['status']) {
@@ -578,8 +576,15 @@ export class TerminalManager {
     }
 
     fitAll() {
-        this.terminals.forEach((inst) => {
-            try { inst.fitAddon.fit(); } catch { }
+        // Double-RAF: first frame lets CSS grid recalculate, second fits terminals
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                this.terminals.forEach((inst) => {
+                    // Skip panels that are hidden (display:none in layout-1)
+                    if (inst.element.offsetParent === null) return;
+                    try { inst.fitAddon.fit(); } catch { }
+                });
+            });
         });
     }
 
