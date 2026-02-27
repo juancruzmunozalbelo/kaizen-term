@@ -579,6 +579,253 @@
     box-shadow: 0 0 12px rgba(255, 190, 11, 0.2);
 }
 
+/* ─── Filter Bar ──────────────────────────────────────────────────── */
+
+.kanban-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.kanban-filter-input {
+    flex: 1;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 4px 8px;
+    outline: none;
+    transition: border-color var(--transition-fast);
+}
+
+.kanban-filter-input:focus {
+    border-color: var(--agent-cyan);
+}
+
+.kanban-filter-priorities {
+    display: flex;
+    gap: 2px;
+}
+
+.filter-priority-btn {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 10px;
+    padding: 2px 6px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all var(--transition-fast);
+}
+
+.filter-priority-btn:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.filter-priority-btn.active {
+    border-color: rgba(0, 229, 255, 0.3);
+    background: rgba(0, 229, 255, 0.06);
+    color: var(--agent-cyan);
+}
+
+/* ─── Due Date Badge ─────────────────────────────────────────────── */
+
+.task-due-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    padding: 0px 5px;
+}
+
+.task-due-badge.overdue {
+    color: var(--agent-magenta);
+    background: rgba(255, 0, 110, 0.08);
+    border-color: rgba(255, 0, 110, 0.15);
+}
+
+.task-due-badge.today {
+    color: var(--agent-amber);
+    background: rgba(255, 190, 11, 0.08);
+    border-color: rgba(255, 190, 11, 0.15);
+}
+
+.task-subtask-badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    padding: 0px 5px;
+}
+
+/* ─── Detail Drawer: Due Date Input ───────────────────────────────── */
+
+.task-detail-due-input {
+    flex: 1;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    padding: 4px 6px;
+    outline: none;
+    cursor: pointer;
+    color-scheme: dark;
+}
+
+/* ─── Detail Drawer: Subtask Checklist ────────────────────────────── */
+
+.task-detail-section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.task-detail-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+}
+
+.subtask-progress {
+    font-family: var(--font-mono);
+    font-size: 10px;
+}
+
+.subtask-list {
+    padding: 4px;
+}
+
+.subtask-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    transition: background var(--transition-fast);
+}
+
+.subtask-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.subtask-checkbox {
+    accent-color: var(--agent-cyan);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.subtask-text {
+    font-size: 12px;
+    color: var(--text-primary);
+    flex: 1;
+    line-height: 1.4;
+}
+
+.subtask-text.done {
+    text-decoration: line-through;
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.subtask-delete {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0;
+    font-size: 10px;
+    padding: 2px 4px;
+    transition: all var(--transition-fast);
+}
+
+.subtask-row:hover .subtask-delete {
+    opacity: 0.5;
+}
+
+.subtask-delete:hover {
+    opacity: 1 !important;
+    color: var(--agent-magenta);
+}
+
+.subtask-add-row {
+    padding: 4px 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.subtask-add-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-family: var(--font-ui);
+    padding: 4px 2px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.subtask-add-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.4;
+}
+
+/* ─── Detail Drawer: Activity Log ─────────────────────────────────── */
+
+.activity-log {
+    padding: 6px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.activity-empty {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 10px;
+    opacity: 0.5;
+}
+
+.activity-item {
+    display: flex;
+    gap: 8px;
+    padding: 3px 4px;
+    font-size: 11px;
+}
+
+.activity-time {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.activity-text {
+    color: var(--text-secondary);
+    line-height: 1.3;
+}
+
 /* ─── Fix 6: Broadcast Modal ──────────────────────────────────────────────── */
 
 .broadcast-modal {

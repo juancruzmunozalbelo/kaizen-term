@@ -54,7 +54,20 @@ class KaizenApp {
     // ─── Callbacks ───────────────────────────────────────────────────
     this.terminalManager.setStatusCallback((id, status) => {
       const agent = this.state.agents.find(a => a.id === id);
-      if (agent) agent.status = status;
+      if (agent) {
+        agent.status = status;
+        // Agent ↔ Task sync
+        const taskId = (agent as any).taskId;
+        if (taskId) {
+          if (status === 'working') {
+            this.kanban.updateTaskDetails(taskId, { status: 'doing' } as any);
+            this.addTaskActivity(taskId, `Agent "${agent.name}" started working`);
+          } else if (status === 'done') {
+            this.kanban.updateTaskDetails(taskId, { status: 'review' } as any);
+            this.addTaskActivity(taskId, `Agent "${agent.name}" completed — moved to Review`);
+          }
+        }
+      }
       this.scheduleStateSave();
     });
 
@@ -589,22 +602,45 @@ Examples:
   }
 
   // Fix 3: Spawn agent pre-wired to a specific Kanban task
-  addAgentForTask(task: { id: string; title: string }) {
+  addAgentForTask(task: { id: string; title: string; description?: string; subtasks?: any[] }) {
     this.addAgent(`agent-${task.id.slice(-4)}`, task);
     if (!this.state.kanbanOpen) { /* keep kanban visible */ }
     this.showToast('success', `⚡ Spawning agent for: ${task.title}`);
 
-    // Feature 3: Zero-click auto-kickoff
-    if (this.state.defaultAgentCommand) {
-      const cmd = this.state.defaultAgentCommand
-        .replace('$TASK_ID', task.id)
-        .replace('$TASK_TITLE', task.title);
-      const lastAgent = this.state.agents[this.state.agents.length - 1];
-      if (lastAgent) {
-        setTimeout(() => {
+    // Log activity
+    this.addTaskActivity(task.id, `Agent spawned for task`);
+
+    const lastAgent = this.state.agents[this.state.agents.length - 1];
+    if (lastAgent) {
+      setTimeout(() => {
+        // Context passing: inject env vars
+        this.terminalManager.writeRaw(lastAgent.id, `export TASK_ID="${task.id}" TASK_TITLE="${task.title}"\n`);
+        if (task.description) {
+          this.terminalManager.writeRaw(lastAgent.id, `export TASK_DESC="${task.description.replace(/"/g, '\\"').replace(/\n/g, ' ')}"\n`);
+        }
+
+        // Write context summary to terminal
+        this.terminalManager.writeToDisplay(lastAgent.id, `\r\n\x1b[36m━━━ Task Context ━━━\x1b[0m\r\n`);
+        this.terminalManager.writeToDisplay(lastAgent.id, `\x1b[1m${task.title}\x1b[0m\r\n`);
+        if (task.description) {
+          this.terminalManager.writeToDisplay(lastAgent.id, `\x1b[2m${task.description.split('\n')[0]}\x1b[0m\r\n`);
+        }
+        if (task.subtasks && task.subtasks.length > 0) {
+          for (const st of task.subtasks) {
+            const check = st.done ? '✓' : '○';
+            this.terminalManager.writeToDisplay(lastAgent.id, `  ${check} ${st.text}\r\n`);
+          }
+        }
+        this.terminalManager.writeToDisplay(lastAgent.id, `\x1b[36m━━━━━━━━━━━━━━━━━━━\x1b[0m\r\n\r\n`);
+
+        // Feature 3: Zero-click auto-kickoff
+        if (this.state.defaultAgentCommand) {
+          const cmd = this.state.defaultAgentCommand
+            .replace('$TASK_ID', task.id)
+            .replace('$TASK_TITLE', task.title);
           this.terminalManager.writeToTerminal(lastAgent.id, cmd + '\r');
-        }, 800); // Wait for shell to be ready
-      }
+        }
+      }, 800);
     }
   }
 
@@ -1503,7 +1539,121 @@ ${codebaseStats?.symbols ? `\nProject has ${codebaseStats.files} indexed files a
     (document.getElementById('task-detail-priority') as HTMLSelectElement).value = task.priority || 'medium';
     const jiraEl = document.getElementById('task-detail-jira')!;
     jiraEl.textContent = task.jiraKey || '—';
+
+    // Due Date
+    const dueInput = document.getElementById('task-detail-due') as HTMLInputElement;
+    if (task.dueDate) {
+      dueInput.value = new Date(task.dueDate).toISOString().split('T')[0];
+    } else {
+      dueInput.value = '';
+    }
+    dueInput.onchange = () => {
+      const val = dueInput.value;
+      const dueDate = val ? new Date(val).getTime() : undefined;
+      this.kanban.updateTaskDetails(task.id, { dueDate } as any);
+    };
+
+    // Subtasks
+    this.renderSubtasks(task);
+
+    // Activity Log
+    this.renderActivityLog(task);
+
     drawer.classList.remove('hidden');
+  }
+
+  private renderSubtasks(task: any) {
+    const container = document.getElementById('task-detail-subtasks')!;
+    const progressEl = document.getElementById('task-detail-subtask-progress')!;
+    const subtasks: { text: string; done: boolean }[] = task.subtasks || [];
+
+    container.innerHTML = '';
+
+    // Progress
+    const doneCount = subtasks.filter(s => s.done).length;
+    if (subtasks.length > 0) {
+      progressEl.textContent = `${doneCount}/${subtasks.length}`;
+      progressEl.style.color = doneCount === subtasks.length ? 'var(--agent-green)' : 'var(--text-muted)';
+    } else {
+      progressEl.textContent = '';
+    }
+
+    subtasks.forEach((st, idx) => {
+      const row = document.createElement('div');
+      row.className = 'subtask-row';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = st.done;
+      cb.className = 'subtask-checkbox';
+      cb.addEventListener('change', () => {
+        subtasks[idx].done = cb.checked;
+        this.kanban.updateTaskDetails(task.id, { subtasks: [...subtasks] } as any);
+        this.renderSubtasks(task);
+      });
+
+      const label = document.createElement('span');
+      label.className = 'subtask-text' + (st.done ? ' done' : '');
+      label.textContent = st.text;
+
+      const del = document.createElement('button');
+      del.className = 'subtask-delete';
+      del.textContent = '✕';
+      del.addEventListener('click', () => {
+        subtasks.splice(idx, 1);
+        task.subtasks = subtasks;
+        this.kanban.updateTaskDetails(task.id, { subtasks: [...subtasks] } as any);
+        this.renderSubtasks(task);
+      });
+
+      row.appendChild(cb);
+      row.appendChild(label);
+      row.appendChild(del);
+      container.appendChild(row);
+    });
+
+    // Wire the add input
+    const addInput = document.getElementById('task-detail-subtask-input') as HTMLInputElement;
+    addInput.onkeydown = (e) => {
+      if (e.key === 'Enter' && addInput.value.trim()) {
+        if (!task.subtasks) task.subtasks = [];
+        task.subtasks.push({ text: addInput.value.trim(), done: false });
+        this.kanban.updateTaskDetails(task.id, { subtasks: [...task.subtasks] } as any);
+        addInput.value = '';
+        this.renderSubtasks(task);
+      }
+    };
+  }
+
+  private renderActivityLog(task: any) {
+    const container = document.getElementById('task-detail-activity')!;
+    const activities: { text: string; timestamp: number }[] = task.activity || [];
+
+    if (activities.length === 0) {
+      container.innerHTML = '<div class="activity-empty">No activity yet</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    // Show newest first, max 20
+    const shown = activities.slice(-20).reverse();
+    for (const a of shown) {
+      const el = document.createElement('div');
+      el.className = 'activity-item';
+      const time = new Date(a.timestamp);
+      const timeStr = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+      el.innerHTML = `<span class="activity-time">${timeStr}</span><span class="activity-text">${this.escapeHtml(a.text)}</span>`;
+      container.appendChild(el);
+    }
+  }
+
+  private addTaskActivity(taskId: string, text: string) {
+    const tasks = this.kanban.getTasks();
+    const task = tasks.find((t: any) => t.id === taskId);
+    if (!task) return;
+    if (!task.activity) task.activity = [];
+    task.activity.push({ text, timestamp: Date.now() });
+    this.kanban.updateTaskDetails(taskId, { activity: [...task.activity] } as any);
   }
 
   closeDetailDrawer() {

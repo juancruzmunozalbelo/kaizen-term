@@ -27,6 +27,8 @@ export class KanbanBoard {
     private spawnAgentCallback?: SpawnAgentCallback;
     private openDetailCallback?: OpenDetailCallback;
     private draggedTask: KanbanTask | null = null;
+    private filterText: string = '';
+    private filterPriority: string = '';
 
     constructor(containerEl: HTMLElement, _initialTasks: KanbanTask[] = []) {
         this.containerEl = containerEl;
@@ -110,6 +112,42 @@ export class KanbanBoard {
     setOpenDetailCallback(cb: OpenDetailCallback) { this.openDetailCallback = cb; }
 
     private init() {
+        // Filter bar
+        const columnsEl = this.containerEl.querySelector('.kanban-columns');
+        if (columnsEl && !this.containerEl.querySelector('.kanban-filter-bar')) {
+            const bar = document.createElement('div');
+            bar.className = 'kanban-filter-bar';
+            bar.innerHTML = `
+                <input type="text" class="kanban-filter-input" placeholder="Filter tasks…" />
+                <div class="kanban-filter-priorities">
+                    <button class="filter-priority-btn" data-priority="" title="All">All</button>
+                    <button class="filter-priority-btn" data-priority="critical" title="Critical">🔴</button>
+                    <button class="filter-priority-btn" data-priority="high" title="High">🟠</button>
+                    <button class="filter-priority-btn" data-priority="medium" title="Medium">🟡</button>
+                    <button class="filter-priority-btn" data-priority="low" title="Low">🔵</button>
+                </div>
+            `;
+            columnsEl.parentElement?.insertBefore(bar, columnsEl);
+
+            const filterInput = bar.querySelector('.kanban-filter-input') as HTMLInputElement;
+            filterInput.addEventListener('input', () => {
+                this.filterText = filterInput.value.toLowerCase();
+                this.render();
+            });
+
+            bar.querySelectorAll('.filter-priority-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const p = (btn as HTMLElement).dataset.priority || '';
+                    this.filterPriority = p;
+                    bar.querySelectorAll('.filter-priority-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    this.render();
+                });
+            });
+            // Default: "All" is active
+            bar.querySelector('.filter-priority-btn')?.classList.add('active');
+        }
+
         const addBtns = this.containerEl.querySelectorAll('.add-task-btn');
         addBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -254,7 +292,20 @@ export class KanbanBoard {
             const column = this.containerEl.querySelector(`.column-tasks[data-status="${status}"]`) as HTMLElement;
             if (!column) continue;
 
-            const tasksForStatus = this.tasks.filter(t => t.status === status);
+            let tasksForStatus = this.tasks.filter(t => t.status === status);
+
+            // Apply filters
+            if (this.filterText) {
+                tasksForStatus = tasksForStatus.filter(t =>
+                    t.title.toLowerCase().includes(this.filterText) ||
+                    (t.description || '').toLowerCase().includes(this.filterText) ||
+                    (t.labels || []).some(l => l.toLowerCase().includes(this.filterText))
+                );
+            }
+            if (this.filterPriority) {
+                tasksForStatus = tasksForStatus.filter(t => (t.priority || 'medium') === this.filterPriority);
+            }
+
             const inlineAdd = column.querySelector('.task-inline-add');
 
             column.innerHTML = '';
@@ -317,6 +368,31 @@ export class KanbanBoard {
         // Task age
         const age = this.formatAge(task.createdAt);
 
+        // Due date badge
+        let dueBadge = '';
+        if (task.dueDate) {
+            const now = Date.now();
+            const diff = task.dueDate - now;
+            const dueDate = new Date(task.dueDate);
+            const dateStr = `${dueDate.getMonth() + 1}/${dueDate.getDate()}`;
+            if (diff < 0) {
+                dueBadge = `<span class="task-due-badge overdue">🔴 ${dateStr}</span>`;
+            } else if (diff < 86400000) {
+                dueBadge = `<span class="task-due-badge today">🟡 ${dateStr}</span>`;
+            } else {
+                dueBadge = `<span class="task-due-badge">${dateStr}</span>`;
+            }
+        }
+
+        // Subtask progress
+        let subtaskBadge = '';
+        if (task.subtasks && task.subtasks.length > 0) {
+            const done = task.subtasks.filter((s: any) => s.done).length;
+            const total = task.subtasks.length;
+            const color = done === total ? 'var(--agent-green)' : 'var(--text-muted)';
+            subtaskBadge = `<span class="task-subtask-badge" style="color:${color}">☑ ${done}/${total}</span>`;
+        }
+
         card.innerHTML = `
             <div class="task-card-row">
                 <span class="priority-dot priority-${priority}" title="${pMeta.label} priority"></span>
@@ -327,6 +403,8 @@ export class KanbanBoard {
                 <div class="task-card-tags">
                     ${jiraBadge}
                     ${labelsHtml}
+                    ${dueBadge}
+                    ${subtaskBadge}
                 </div>
                 <div class="task-card-meta-right">
                     <span class="task-card-age">${age}</span>

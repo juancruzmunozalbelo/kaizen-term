@@ -214,10 +214,34 @@
                 </select>
               </div>
               <div class="task-detail-field">
+                <label>Due</label>
+                <input type="date" id="task-detail-due" class="task-detail-due-input" />
+              </div>
+              <div class="task-detail-field">
                 <label>Jira</label>
                 <span id="task-detail-jira" class="task-detail-jira-key">—</span>
               </div>
             </div>
+
+            <!-- Subtask Checklist -->
+            <div class="task-detail-section">
+              <div class="task-detail-section-header">
+                <span>Subtasks</span>
+                <span id="task-detail-subtask-progress" class="subtask-progress"></span>
+              </div>
+              <div id="task-detail-subtasks" class="subtask-list"></div>
+              <div class="subtask-add-row">
+                <input type="text" id="task-detail-subtask-input" class="subtask-add-input"
+                  placeholder="Add subtask…" />
+              </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="task-detail-section">
+              <div class="task-detail-section-header"><span>Activity</span></div>
+              <div id="task-detail-activity" class="activity-log"></div>
+            </div>
+
             <button id="task-detail-spawn" class="task-detail-spawn-btn">⚡ Spawn Agent for this Task</button>
           </div>
         </div>

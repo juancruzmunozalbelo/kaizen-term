@@ -20,6 +20,9 @@ export interface KanbanTask {
     jiraKey?: string;
     agentId?: string;
     createdAt: number;
+    subtasks?: { text: string; done: boolean }[];
+    dueDate?: number;
+    activity?: { text: string; timestamp: number }[];
 }
 
 export interface AgentProfile {
