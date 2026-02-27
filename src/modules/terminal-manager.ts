@@ -396,6 +396,14 @@ export class TerminalManager {
         body.style.position = 'relative';
         body.appendChild(loadingEl);
 
+        // Auto-fit terminal when panel resizes (layout change, sidebar toggle, window resize)
+        const resizeObserver = new ResizeObserver(() => {
+            // Skip if panel is hidden (display:none in layout-1)
+            if (panel.offsetParent === null) return;
+            try { fitAddon.fit(); } catch { }
+        });
+        resizeObserver.observe(body);
+
         // Forward keyboard input
         terminal.onData((data: string) => {
             this.writeToTerminal(agent.id, data);
