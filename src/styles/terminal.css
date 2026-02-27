@@ -185,6 +185,14 @@
     flex: 1;
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.terminal-mount {
+    flex: 1;
+    min-height: 0;
 }
 
 .panel-terminal {

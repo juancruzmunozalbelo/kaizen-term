@@ -323,7 +323,6 @@ export class TerminalManager {
 
         const mount = panel.querySelector('.terminal-mount') as HTMLElement;
         mount.style.width = '100%';
-        mount.style.height = '100%';
 
         terminal.open(mount);
 
