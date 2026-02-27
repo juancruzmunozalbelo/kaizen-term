@@ -77,6 +77,8 @@ export class TerminalManager {
     private static readonly ANSI_ERROR_RE = /\x1b\[(?:31|91|1;31)m|\b(error|Error|ERROR|FAILED|failed|exception|Exception)\b/;
     // Strip ANSI for last-line display
     private static readonly ANSI_STRIP_RE = /\x1b\[\?]?[0-9;]*[a-zA-Z]|\x1b\](?:[^\x07\x1b]*(?:\x07|\x1b\\))|\x1b\][^\x07]*$|\x1b\(B/g;
+    // Secondary cleanup: catch residual bracket sequences when ESC byte was split across chunks
+    private static readonly ANSI_RESIDUAL_RE = /\[[\?]?[0-9;]*[a-zA-Z]|\][0-9]+;[^\x07]*(?:\x07|$)/g;
     // Amber Alert: detect prompts waiting for user input
     private static readonly INPUT_BLOCKED_RE = /\?\s*$|\[y\/N\]|\[Y\/n\]|password:|Password:|passphrase:|Enter.*:|Select.*:|Press.*continue|\(yes\/no\)/i;
     // Shell prompt detection for pseudo-blocks / agent status
@@ -134,6 +136,7 @@ export class TerminalManager {
         // Strip ANSI for clean last-line text
         const clean = rawData
             .replace(TerminalManager.ANSI_STRIP_RE, '')
+            .replace(TerminalManager.ANSI_RESIDUAL_RE, '')
             .replace(/\r/g, '')
             .trim();
         const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
