@@ -30,6 +30,8 @@ export class KanbanBoard {
     private filterText: string = '';
     private filterPriority: string = '';
 
+    private pendingWrite = false;
+
     constructor(containerEl: HTMLElement, _initialTasks: KanbanTask[] = []) {
         this.containerEl = containerEl;
         this.init();
@@ -40,9 +42,19 @@ export class KanbanBoard {
         // Listen for live updates (from MCP server writing to file)
         if (bridge?.onTasksUpdated) {
             bridge.onTasksUpdated((tasks: any[]) => {
-                this.tasks = this.normalizeFileTasks(tasks);
+                // Skip if we just wrote to the file ourselves
+                if (this.pendingWrite) {
+                    this.pendingWrite = false;
+                    return;
+                }
+                const normalized = this.normalizeFileTasks(tasks);
+                // Only update if task set actually changed (avoid feedback loop)
+                const currentIds = this.tasks.map(t => t.id).sort().join(',');
+                const newIds = normalized.map(t => t.id).sort().join(',');
+                if (currentIds === newIds && this.tasks.length === normalized.length) return;
+                this.tasks = normalized;
                 this.render();
-                this.emitChange();
+                this.onTasksChange?.(this.tasks);
             });
         }
     }
@@ -256,6 +268,7 @@ export class KanbanBoard {
         this.render();
         this.emitChange();
         // Granular IPC: only add the new task, don't overwrite the array
+        this.pendingWrite = true;
         bridge?.addTask?.(this.toMcpFormat(task));
         return task;
     }
@@ -267,6 +280,7 @@ export class KanbanBoard {
             this.render();
             this.emitChange();
             // Granular IPC: only update this task's status
+            this.pendingWrite = true;
             bridge?.updateTask?.(id, { status: newStatus });
         }
     }
@@ -276,6 +290,7 @@ export class KanbanBoard {
         this.render();
         this.emitChange();
         // Granular IPC: only delete this specific task
+        this.pendingWrite = true;
         bridge?.deleteTask?.(id);
     }
 
@@ -499,6 +514,7 @@ export class KanbanBoard {
         Object.assign(task, updates);
         this.render();
         this.emitChange();
+        this.pendingWrite = true;
         bridge?.updateTask?.(id, updates);
     }
 
